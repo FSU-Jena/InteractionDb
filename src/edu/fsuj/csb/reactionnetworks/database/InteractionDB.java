@@ -37,6 +37,7 @@ import edu.fsuj.csb.tools.urn.miriam.GlycomeDBurn;
 import edu.fsuj.csb.tools.urn.miriam.JcsdUrn;
 import edu.fsuj.csb.tools.urn.miriam.KeggCompoundUrn;
 import edu.fsuj.csb.tools.urn.miriam.KeggDrugUrn;
+import edu.fsuj.csb.tools.urn.miriam.KeggEDrugUrn;
 import edu.fsuj.csb.tools.urn.miriam.KeggGlycanUrn;
 import edu.fsuj.csb.tools.urn.miriam.KeggReactionUrn;
 import edu.fsuj.csb.tools.urn.miriam.KeggUrn;
@@ -1284,13 +1285,20 @@ public class InteractionDB {
   }
 	
 	private static TreeSet<Formula> getFormulasFromURNResolutionPages(URN urnLinkedFromNewEntry) throws IOException, NoTokenException, DataFormatException, SQLException {
+		Tools.startMethod("getFormulasFromURNResolutionPages("+urnLinkedFromNewEntry+")");
 		TreeSet<Formula> result=new TreeSet<Formula>(ObjectComparator.get());
 		Set<URL> urls = urnLinkedFromNewEntry.urls();
+		if (urls==null) {
+			Tools.endMethod();
+			return null;
+		}
 		for (URL url: urls){
 			Formula  f=getFormulaFrom(url);
 			if (f!=null) result.add(f);
 		}
-	  return result.isEmpty()?null:result;
+		result=result.isEmpty()?null:result;
+		Tools.endMethod(result);
+	  return result;
   }
 
 	public static Integer createSubstance(String name, Object formula, TreeSet<URN> urns, URL source) throws SQLException, UnexpectedException, NoSuchMethodException {
@@ -1628,12 +1636,7 @@ public class InteractionDB {
 			int id=rs.getInt(1);
 			result=getFormula(id);
 		}
-		if (result==null) {
-			Tools.warn("Can not resolve "+key);
-			try {
-	      Thread.sleep(5000);
-      } catch (InterruptedException e) { }
-		}
+		if (result==null) Tools.warn("Can not resolve "+key);
 		Tools.endMethod(result);
 		return result;
   }
@@ -1673,7 +1676,11 @@ public class InteractionDB {
 			lineNumber++;			
 		}
 		if (missingAbbrevation){
-			Tools.warn("missing reolution for: "+unresolvedAbbrevations);
+			if (Tools.warnOnce("missing resolution for: "+unresolvedAbbrevations)) {
+			/*	try {
+					Thread.sleep(5000);
+				} catch (InterruptedException e){} */
+			}
 			Tools.endMethod(null);
 			return null;
 		}
@@ -1957,13 +1964,42 @@ public class InteractionDB {
 		Tools.startMethod("preprareAbbrevations("+mappingFromKeggSubstanceIdsToDbIds+")");
 		Stack<String> referencedSubstanceIds = readMonosaccarideCodes();
 		
-		addAbbrevation("Cer","C00195",referencedSubstanceIds);			
-		addAbbrevation("Dol","C00381",referencedSubstanceIds);
-		addAbbrevation("EtN","C00189",referencedSubstanceIds);
-		addAbbrevation("Gro","C00116",referencedSubstanceIds);
-		addAbbrevation("Ino","C00137",referencedSubstanceIds);
-		addAbbrevation("P","C00009",referencedSubstanceIds);
-		addAbbrevation("S","C00059",referencedSubstanceIds);
+		addAbbrevation("ADP",				"C00008",referencedSubstanceIds);
+		addAbbrevation("Ala",				"C00041",referencedSubstanceIds);
+		addAbbrevation("Arg",				"C00062",referencedSubstanceIds);
+		addAbbrevation("Asn",				"C00152",referencedSubstanceIds);
+		addAbbrevation("Asp",				"C00049",referencedSubstanceIds);
+		addAbbrevation("Cys",				"C00097",referencedSubstanceIds);
+		addAbbrevation("Cer",				"C00195",referencedSubstanceIds);			
+		addAbbrevation("CMP",				"C00055",referencedSubstanceIds);			
+		addAbbrevation("Dol",				"C00381",referencedSubstanceIds);
+		addAbbrevation("EtN",				"C00189",referencedSubstanceIds);
+		addAbbrevation("Gln",				"C00064",referencedSubstanceIds);
+		addAbbrevation("GDP",				"C00035",referencedSubstanceIds);
+		addAbbrevation("Glu",				"C00025",referencedSubstanceIds);
+		addAbbrevation("Gly",				"C00037",referencedSubstanceIds);
+		addAbbrevation("Gro",				"C00116",referencedSubstanceIds);
+		addAbbrevation("His",				"C00135",referencedSubstanceIds);
+		addAbbrevation("Ile",				"C00407",referencedSubstanceIds);
+		addAbbrevation("Ino",				"C00137",referencedSubstanceIds);
+		addAbbrevation("Leu",				"C00123",referencedSubstanceIds);
+		addAbbrevation("Lys",				"C00047",referencedSubstanceIds);
+		addAbbrevation("Met",				"C00073",referencedSubstanceIds);
+		addAbbrevation("Neu5Ac",		"C00270",referencedSubstanceIds);
+		addAbbrevation("NeuNGc",		"C03410",referencedSubstanceIds);
+		addAbbrevation("Oleandrose","C08237",referencedSubstanceIds);
+		addAbbrevation("P",					"C00009",referencedSubstanceIds);
+		addAbbrevation("Phe",				"C00079",referencedSubstanceIds);
+		addAbbrevation("Pro",				"C00148",referencedSubstanceIds);
+		addAbbrevation("Protein",		"C00017",referencedSubstanceIds);
+		addAbbrevation("S",  				"C00059",referencedSubstanceIds);
+		addAbbrevation("Sec",				"C05688",referencedSubstanceIds);
+		addAbbrevation("Ser",				"C00065",referencedSubstanceIds);
+		addAbbrevation("Thr",				"C00188",referencedSubstanceIds);
+		addAbbrevation("Trp",				"C00078",referencedSubstanceIds);
+		addAbbrevation("Tyr",				"C00082",referencedSubstanceIds);		
+		addAbbrevation("UDP",				"C00015",referencedSubstanceIds);		
+		addAbbrevation("Val",				"C00183",referencedSubstanceIds);
 		while (!referencedSubstanceIds.isEmpty())	parseSubstanceInfo(referencedSubstanceIds, mappingFromKeggSubstanceIdsToDbIds);
 		Tools.endMethod(); 
   }
@@ -2021,19 +2057,22 @@ public class InteractionDB {
   	 * @throws AlreadyBoundException 
   	 * @throws NoTokenException 
   	 */
-  	public static void parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
+  	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
   		Tools.startMethod("parseSubstanceInfo("+unexploredKeggIds+", "+mappingFromKeggSubstanceIdsToDbIds+")");
   		String keggSubstanceId = unexploredKeggIds.pop();
   		if (mappingFromKeggSubstanceIdsToDbIds.containsKey(keggSubstanceId)) {
   			Tools.indent(keggSubstanceId + " already analyzed");
   			Tools.endMethod();
-  			return;
+  			return false;
   		}
-  		Tools.indent("parsing "+keggSubstanceId);
   		KeggUrn substanceUrn = urnForComponent(keggSubstanceId);
+  		
+  		Tools.indent("parsing "+keggSubstanceId);
+  		if (!Tools.logging()) System.out.println("parsing " + substanceUrn + "...");
+  		
   		if (substanceUrn == null) {
   			Tools.endMethod();
-  			return;
+  			throw new DataFormatException("Can not create URN for "+keggSubstanceId);
   		}
   		String description = substanceUrn.fetch();
   
@@ -2042,11 +2081,10 @@ public class InteractionDB {
   		TreeSet<URN> urns = new TreeSet<URN>(ObjectComparator.get());
   		urns.add(substanceUrn);
   
-  		System.out.println("parsing " + substanceUrn + "...");
   
   		if (description.length() < 5) {
   			Tools.endMethod();
-  			return;
+  			return false;
   		}
   
   		/************ the following lines of code are fixes for some special entries *******************************/
@@ -2054,7 +2092,7 @@ public class InteractionDB {
   		if (description.contains("No such database")) {
   			if (keggSubstanceId.startsWith("C06125LECTIN") || keggSubstanceId.startsWith("C04927LECTIN") || keggSubstanceId.startsWith("C04911LECTIN") || keggSubstanceId.startsWith("C03405LECTIN") || keggSubstanceId.startsWith("C02352LECTIN")) {
   				Tools.endMethod();
-  				return; // has some remarks, that are hard to parse, but are also not of interest
+  				return false; // has some remarks, that are hard to parse, but are also not of interest
   			} else throw new IllegalArgumentException("was not able to create valid url from content of " + keggSubstanceId);
   		}
   
@@ -2200,12 +2238,16 @@ public class InteractionDB {
   				}
   			}
   		}
-  		if (keggSubstanceId.startsWith("G")){
-  			Formula derivedFormula=InteractionDB.deriveFormulaFromKCF(new URL("http://www.genome.jp/dbget-bin/www_bget?-f+k+glycan+"+keggSubstanceId));
-  			if (formula==null){
-  				formula=derivedFormula;
-  			} else {
-  				if (!formula.equals(derivedFormula)) throw new AlreadyBoundException("Derived formula ("+derivedFormula+") differs from previously given formula ("+formula+") of "+keggSubstanceId);
+  		if (description.contains("No such data")) {
+  			names.add("missing substance");
+  		} else {
+  			if (keggSubstanceId.startsWith("G")){
+  				Formula derivedFormula=InteractionDB.deriveFormulaFromKCF(new URL("http://www.genome.jp/dbget-bin/www_bget?-f+k+glycan+"+keggSubstanceId));
+  				if (formula==null){
+  					formula=derivedFormula;
+  				} else {
+  					if (!formula.equals(derivedFormula)) throw new AlreadyBoundException("Derived formula ("+derivedFormula+") differs from previously given formula ("+formula+") of "+keggSubstanceId);
+  				}
   			}
   		}
   
@@ -2220,8 +2262,7 @@ public class InteractionDB {
   			}
   		}
   
-  		for (Iterator<String> it = synonyms.iterator(); it.hasNext();)
-  			unexploredKeggIds.push(it.next());
+  		for (Iterator<String> it = synonyms.iterator(); it.hasNext();) unexploredKeggIds.push(it.next());
   		
   		int sid=InteractionDB.createSubstance(names, formula, urns, substanceUrn.url());
   
@@ -2232,6 +2273,7 @@ public class InteractionDB {
   //		if (formula != null) InteractionDB.setFormula(sid, formula);
   
   		Tools.endMethod();
+  		return true;
   	}
   	
   	public static KeggUrn urnForComponent(String keggId) throws MalformedURLException, DataFormatException {
@@ -2239,6 +2281,28 @@ public class InteractionDB {
   		if (keggId.startsWith("G")) return new KeggGlycanUrn(keggId);
   		if (keggId.startsWith("R")) return new KeggReactionUrn(keggId);
   		if (keggId.startsWith("D")) return new KeggDrugUrn(keggId);
+  		if (keggId.startsWith("E")) return new KeggEDrugUrn(keggId);
   		return null;
+  	}
+  	
+  	public static void printMissingAbbrevations() throws SQLException{
+  		System.out.println("unresolved abbrevations:");
+  		Statement st=createStatement();
+  		for (String abbrevation:unresolvedAbbrevations){
+  			String query="SELECT DISTINCT urn FROM id_names NATURAL JOIN names NATURAL JOIN urns WHERE name="+dbString(abbrevation)+" AND urn like '%kegg%'";
+  			try {
+  				ResultSet rs=st.executeQuery(query);
+  				if (rs.next()){
+  					System.out.println(abbrevation);
+  					System.out.println("...may belong to "+rs.getString(1));
+  					while (rs.next())	System.out.println("...may belong to "+rs.getString(1));
+  				}  				
+  				rs.close();
+  			} catch (SQLException e){
+  				Tools.warn("Error on "+query);
+  				throw e;
+  			}
+  		}
+  		st.close();
   	}
 }
