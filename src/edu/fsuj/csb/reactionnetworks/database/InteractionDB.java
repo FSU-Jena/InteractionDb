@@ -1964,42 +1964,42 @@ public class InteractionDB {
 		Tools.startMethod("preprareAbbrevations("+mappingFromKeggSubstanceIdsToDbIds+")");
 		Stack<String> referencedSubstanceIds = readMonosaccarideCodes();
 		
-		addAbbrevation("ADP",				"C00008",referencedSubstanceIds);
-		addAbbrevation("Ala",				"C00041",referencedSubstanceIds);
-		addAbbrevation("Arg",				"C00062",referencedSubstanceIds);
-		addAbbrevation("Asn",				"C00152",referencedSubstanceIds);
-		addAbbrevation("Asp",				"C00049",referencedSubstanceIds);
-		addAbbrevation("Cys",				"C00097",referencedSubstanceIds);
-		addAbbrevation("Cer",				"C00195",referencedSubstanceIds);			
+		addAbbrevation("ADP","C00008",referencedSubstanceIds);
+		addAbbrevation("Ala","C00041",referencedSubstanceIds);
+		addAbbrevation("Arg","C00062",referencedSubstanceIds);
+		addAbbrevation("Asn","C00152",referencedSubstanceIds);
+		addAbbrevation("Asp","C00049",referencedSubstanceIds);
+		addAbbrevation("Cys","C00097",referencedSubstanceIds);
+		addAbbrevation("Cer","C00195",referencedSubstanceIds);			
 		addAbbrevation("CMP",				"C00055",referencedSubstanceIds);			
-		addAbbrevation("Dol",				"C00381",referencedSubstanceIds);
-		addAbbrevation("EtN",				"C00189",referencedSubstanceIds);
-		addAbbrevation("Gln",				"C00064",referencedSubstanceIds);
-		addAbbrevation("GDP",				"C00035",referencedSubstanceIds);
-		addAbbrevation("Glu",				"C00025",referencedSubstanceIds);
-		addAbbrevation("Gly",				"C00037",referencedSubstanceIds);
-		addAbbrevation("Gro",				"C00116",referencedSubstanceIds);
-		addAbbrevation("His",				"C00135",referencedSubstanceIds);
-		addAbbrevation("Ile",				"C00407",referencedSubstanceIds);
-		addAbbrevation("Ino",				"C00137",referencedSubstanceIds);
-		addAbbrevation("Leu",				"C00123",referencedSubstanceIds);
-		addAbbrevation("Lys",				"C00047",referencedSubstanceIds);
-		addAbbrevation("Met",				"C00073",referencedSubstanceIds);
+		addAbbrevation("Dol","C00381",referencedSubstanceIds);
+		addAbbrevation("EtN","C00189",referencedSubstanceIds);
+		addAbbrevation("Gln","C00064",referencedSubstanceIds);
+		addAbbrevation("GDP","C00035",referencedSubstanceIds);
+		addAbbrevation("Glu","C00025",referencedSubstanceIds);
+		addAbbrevation("Gly","C00037",referencedSubstanceIds);
+		addAbbrevation("Gro","C00116",referencedSubstanceIds);
+		addAbbrevation("His","C00135",referencedSubstanceIds);
+		addAbbrevation("Ile","C00407",referencedSubstanceIds);
+		addAbbrevation("Ino","C00137",referencedSubstanceIds);
+		addAbbrevation("Leu","C00123",referencedSubstanceIds);
+		addAbbrevation("Lys","C00047",referencedSubstanceIds);
+		addAbbrevation("Met","C00073",referencedSubstanceIds);
 		addAbbrevation("Neu5Ac",		"C00270",referencedSubstanceIds);
 		addAbbrevation("NeuNGc",		"C03410",referencedSubstanceIds);
 		addAbbrevation("Oleandrose","C08237",referencedSubstanceIds);
-		addAbbrevation("P",					"C00009",referencedSubstanceIds);
-		addAbbrevation("Phe",				"C00079",referencedSubstanceIds);
-		addAbbrevation("Pro",				"C00148",referencedSubstanceIds);
+		addAbbrevation("P",  "C00009",referencedSubstanceIds);
+		addAbbrevation("Phe","C00079",referencedSubstanceIds);
+		addAbbrevation("Pro","C00148",referencedSubstanceIds);
 		addAbbrevation("Protein",		"C00017",referencedSubstanceIds);
-		addAbbrevation("S",  				"C00059",referencedSubstanceIds);
-		addAbbrevation("Sec",				"C05688",referencedSubstanceIds);
-		addAbbrevation("Ser",				"C00065",referencedSubstanceIds);
-		addAbbrevation("Thr",				"C00188",referencedSubstanceIds);
-		addAbbrevation("Trp",				"C00078",referencedSubstanceIds);
-		addAbbrevation("Tyr",				"C00082",referencedSubstanceIds);		
-		addAbbrevation("UDP",				"C00015",referencedSubstanceIds);		
-		addAbbrevation("Val",				"C00183",referencedSubstanceIds);
+		addAbbrevation("S",  "C00059",referencedSubstanceIds);
+		addAbbrevation("Sec","C05688",referencedSubstanceIds);
+		addAbbrevation("Ser","C00065",referencedSubstanceIds);
+		addAbbrevation("Thr","C00188",referencedSubstanceIds);
+		addAbbrevation("Trp","C00078",referencedSubstanceIds);
+		addAbbrevation("Tyr","C00082",referencedSubstanceIds);		
+		addAbbrevation("UDP","C00015",referencedSubstanceIds);		
+		addAbbrevation("Val","C00183",referencedSubstanceIds);
 		while (!referencedSubstanceIds.isEmpty())	parseSubstanceInfo(referencedSubstanceIds, mappingFromKeggSubstanceIdsToDbIds);
 		Tools.endMethod(); 
   }
@@ -2291,13 +2291,13 @@ public class InteractionDB {
   		for (String abbrevation:unresolvedAbbrevations){
   			String query="SELECT DISTINCT urn FROM id_names NATURAL JOIN names NATURAL JOIN urns WHERE name="+dbString(abbrevation)+" AND urn like '%kegg%'";
   			try {
-  				ResultSet rs=st.executeQuery(query);
+  			ResultSet rs=st.executeQuery(query);
   				if (rs.next()){
   					System.out.println(abbrevation);
   					System.out.println("...may belong to "+rs.getString(1));
   					while (rs.next())	System.out.println("...may belong to "+rs.getString(1));
-  				}  				
-  				rs.close();
+  			}
+  			rs.close();
   			} catch (SQLException e){
   				Tools.warn("Error on "+query);
   				throw e;
