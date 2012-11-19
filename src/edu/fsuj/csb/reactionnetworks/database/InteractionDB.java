@@ -1701,8 +1701,10 @@ public class InteractionDB {
 		}
 		if (lines[lineNumber].startsWith("EDGE")){
 			int bonds=Integer.parseInt(lines[lineNumber].substring(6).trim());
-			Formula water=new Formula("H2O");
-			sum.subtract(water.multiply(bonds)); // for every bond formed, one molecule of water is released
+			if (bonds>0){
+				Formula water=new Formula("H2O");
+				sum.subtract(water.multiply(bonds)); // for every bond formed, one molecule of water is released
+			}
 		}
 		Tools.endMethod(sum);
 	  return sum;
@@ -2291,7 +2293,12 @@ public class InteractionDB {
   		return true;
   	}
   	
-  	public static KeggUrn urnForComponent(String keggId) throws MalformedURLException, DataFormatException {
+  	public static String keggIdFrom(String URLorURN){
+  		if (URLorURN.startsWith("http")||URLorURN.startsWith("urn:miriam:kegg")) return URLorURN.substring(URLorURN.length()-6);
+			return null;
+  	}
+  	
+  	public static KeggUrn urnForComponent(String keggId) throws MalformedURLException, DataFormatException {  		
   		if (keggId.startsWith("C")) return new KeggCompoundUrn(keggId);
   		if (keggId.startsWith("G")) return new KeggGlycanUrn(keggId);
   		if (keggId.startsWith("R")) return new KeggReactionUrn(keggId);
@@ -2320,4 +2327,31 @@ public class InteractionDB {
   		}
   		st.close();
   	}
+
+		public static TreeMap<URN, TreeSet<URL>> getDecisionsForKeggUrls() throws SQLException, MalformedURLException, DataFormatException {
+			Tools.startMethod("getDecisionsForKeggUrls()");
+			String query="SELECT keyphrase FROM decisions WHERE keyphrase like '%:kegg.%'";
+			TreeMap<URN,TreeSet<URL>> map=new TreeMap<URN, TreeSet<URL>>(ObjectComparator.get());
+			try {
+				Statement st=createStatement();
+				ResultSet rs=st.executeQuery(query);
+				while (rs.next()){
+					TreeSet<URL> urls=Tools.URLSet();
+					String key=rs.getString(1);
+					String[] parts = key.replace("[", "").replace("]", "").split("<|>|,");
+					KeggUrn urn=null;
+					for (String part:parts) {
+						part=part.trim();
+						if (part.startsWith("urn")) {
+							urn=urnForComponent(keggIdFrom(part));
+						} else urls.add(new URL(part.trim()));
+					}
+					map.put(urn, urls);
+				}
+			} catch (SQLException e) {
+				throw new SQLException(e.getMessage()+"\n\nQuery was: "+query);
+			}
+			Tools.endMethod(map);
+			return map;
+    }
 }
