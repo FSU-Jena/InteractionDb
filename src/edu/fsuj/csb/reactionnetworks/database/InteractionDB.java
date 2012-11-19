@@ -13,6 +13,7 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -73,6 +74,7 @@ public class InteractionDB {
 	private static TreeMap<String, TreeSet<String>> unificationRules;
 	private static TreeMap<URL,Formula> formulaMap=new TreeMap<URL, Formula>(ObjectComparator.get());
 	private static TreeSet<String> unresolvedAbbrevations=Tools.StringSet();
+	private static long lastConnectionAccess=0;
 	
 	public final static int COMPARTMENT_GROUP = 1;
 	public static final int COMPARTMENT = 2;
@@ -119,6 +121,13 @@ public class InteractionDB {
 	 * @throws SQLException
 	 */
 	private static Connection connectDB() throws SQLException {
+		if (connection!=null) try {
+			System.out.println("closing outdated Connection");
+			Thread.sleep(2000);
+			connection.close();
+		} catch (SQLException e) {			
+		} catch (InterruptedException e) {}
+		
 		Tools.indent("Connecting to database " + dbName + " on " + dbHost + "..."); // Ausgabe auf der Konsole
 		try {
 			Class.forName(dbDriver).newInstance(); // Erzeugt eine neue Instanz des Datenbanktreibers
@@ -138,9 +147,15 @@ public class InteractionDB {
 	 * @throws SQLException
 	 */
 	private static Connection databaseConnection() throws SQLException {
-		if (connection == null || connection.isClosed()) connection = connectDB();
+		if (connection == null || connection.isClosed() || connectionOutDated()) connection = connectDB();		
+		lastConnectionAccess = new GregorianCalendar().getTimeInMillis()/1000;
 		return connection;
 	}
+
+	private static boolean connectionOutDated() {
+		long time=new GregorianCalendar().getTimeInMillis()/1000;
+		return (time-lastConnectionAccess)>3600;
+  }
 
 	/**
 	 * starts a new database statement. a new database connection is established, if needed
