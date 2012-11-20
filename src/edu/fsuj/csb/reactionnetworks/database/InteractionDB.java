@@ -122,7 +122,7 @@ public class InteractionDB {
 	 */
 	private static Connection connectDB() throws SQLException {
 		if (connection!=null) try {
-			System.out.println("closing outdated Connection");
+			Tools.indent("closing outdated Connection");
 			Thread.sleep(2000);
 			connection.close();
 		} catch (SQLException e) {			
