@@ -1238,26 +1238,11 @@ public class InteractionDB {
 			}
 		}
 		
-		String query=null;
 		/* if automatic assignment available: write to database */
-		if (decision!=null) try {
-			query="INSERT INTO decisions VALUES ("+dbString(databaseKey)+", "+decision+", TRUE)";
-			execute(query);
-		} catch (SQLException se){
-			if (!se.getMessage().startsWith("Duplicate key")){
-				System.err.println(query);
-				throw se;
-			}
-		}
+		if (decision!=null) addDecision(databaseKey,decision,true);
 		
 		/* if not assigned: try to load from decision database */
-		if (decision==null) {
-			Statement st=createStatement();
-			ResultSet rs=st.executeQuery("SELECT value FROM decisions WHERE keyphrase="+dbString(databaseKey));
-			if (rs.next()) decision=rs.getInt(1);
-			rs.close();
-			st.close();			
-		}
+		if (decision==null) decision=getDecision(databaseKey);
 		
 		/* if still not assigned (i.e. not in decision database: ask user */
 		if (decision==null){
@@ -1278,7 +1263,8 @@ public class InteractionDB {
 			}
 			
 			/* store user dcision */
-			execute("INSERT INTO decisions VALUES ("+dbString(databaseKey)+", "+decision+", FALSE)");
+			addDecision(databaseKey, decision, false);
+
 		}
 		if (decision!=null){
 			switch (decision) {
@@ -1299,6 +1285,28 @@ public class InteractionDB {
 		return decision;
   }
 	
+	public static void addDecision(String databaseKey, Integer decision, boolean automatic) throws SQLException {
+		String query="INSERT INTO decisions VALUES ("+dbString(databaseKey)+", "+decision+", "+(automatic?"TRUE":"FALSE")+")";		
+		try {
+			execute(query);
+		} catch (SQLException se){
+			if (!se.getMessage().startsWith("Duplicate key")){
+				System.err.println(query);
+				throw se;
+			}
+		}
+  }
+
+	public static Integer getDecision(Object databaseKey) throws SQLException {
+		Integer decision=null;
+		Statement st=createStatement();
+		ResultSet rs=st.executeQuery("SELECT value FROM decisions WHERE keyphrase="+dbString(databaseKey));
+		if (rs.next()) decision=rs.getInt(1);
+		rs.close();
+		st.close();
+		return decision;
+  }
+
 	private static TreeSet<Formula> getFormulasFromURNResolutionPages(URN urnLinkedFromNewEntry) throws IOException, NoTokenException, DataFormatException, SQLException {
 		Tools.startMethod("getFormulasFromURNResolutionPages("+urnLinkedFromNewEntry+")");
 		TreeSet<Formula> result=new TreeSet<Formula>(ObjectComparator.get());
