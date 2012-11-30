@@ -2127,24 +2127,23 @@ public class InteractionDB {
   			} else throw new IllegalArgumentException("found \"obsolete\" keyword in file! going to sleep");
   		}
   
-  		if (description.toLowerCase().contains("composition")) {
-  			if (keggSubstanceId.startsWith("G") || keggSubstanceId.equals("C16270") || keggSubstanceId.equals("C16271")) {
-  				// those files include the word "composition", but within another context
-  			} else throw new IllegalArgumentException("found \"composition\" keyword in file! going to sleep");
-  		}
-  
   		/************** end of fixes *****************************/
   
   		String[] lines = description.split("\n");
   		Formula formula = null;
   		TreeSet<String> synonyms = Tools.StringSet();
-  
+  		String definition=null;
   		for (int i = 0; i < lines.length; i++) {
   
   			if (lines[i].contains("<nobr>Name</nobr>")) {
   				while (!lines[++i].contains("</div>")) {
   					String name = Tools.removeHtml(lines[i]);
   					names.add(name.endsWith(";") ? (name.substring(0, name.length() - 1)) : name); // only remove endo-of-line semicolons, preserve in-string semicolons
+  				}
+  			}
+  			if (lines[i].contains("<nobr>Definition</nobr>")) {
+  				while (!lines[++i].contains("</div>")) {
+  					definition = Tools.removeHtml(lines[i]);
   				}
   			}
   			if (lines[i].contains("<nobr>Composition</nobr>") && names.isEmpty()) {
@@ -2277,7 +2276,12 @@ public class InteractionDB {
   		}
   
   		if (formula==null) Tools.note("no formula!");
-  		if (names.isEmpty()) throw new NameNotFoundException();
+  		if (names.isEmpty()) {
+  			if (definition != null) {
+  				Tools.warn("No name found for "+keggSubstanceId+", using definition: \""+definition+"\".");
+  				names.add(definition);
+  			} else throw new NameNotFoundException();
+  		}
   
   		if (synonyms.size() > 5) {
   			System.err.println("compound with numerous synonyms. check: " + synonyms + " (" + synonyms.size() + ")");
