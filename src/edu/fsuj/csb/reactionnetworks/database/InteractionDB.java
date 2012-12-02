@@ -2083,7 +2083,7 @@ public class InteractionDB {
   	 * @throws NoTokenException 
   	 */
   	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
-  		Tools.startMethod("parseSubstanceInfo("+unexploredKeggIds+", "+mappingFromKeggSubstanceIdsToDbIds+")");
+  		Tools.startMethod("parseSubstanceInfo(...,...)");
   		String keggSubstanceId = unexploredKeggIds.pop();
   		if (mappingFromKeggSubstanceIdsToDbIds.containsKey(keggSubstanceId)) {
   			Tools.indent(keggSubstanceId + " already analyzed");
