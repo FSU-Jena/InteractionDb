@@ -2120,11 +2120,12 @@ public class InteractionDB {
   				return false; // has some remarks, that are hard to parse, but are also not of interest
   			} else throw new IllegalArgumentException("was not able to create valid url from content of " + keggSubstanceId);
   		}
-  
-  		if (description.toLowerCase().contains("obsolete")) {
-  			if (keggSubstanceId.equals("C11071") || keggSubstanceId.equals("C18896")) {
-  				// those files include the word "obsolete", but within another context
-  			} else throw new IllegalArgumentException("found \"obsolete\" keyword in file! going to sleep");
+
+  		String lowerDescription=description.toLowerCase();
+  		int pos=lowerDescription.indexOf("obsolete");
+  		if (pos>0 && pos!=lowerDescription.indexOf("obsolete pesticide")){
+  			Runtime.getRuntime().exec("gnome-open "+substanceUrn.url());
+  			throw new IllegalArgumentException("found \"obsolete\" keyword in file! going to sleep");
   		}
   
   		/************** end of fixes *****************************/
@@ -2164,7 +2165,7 @@ public class InteractionDB {
   				boolean stop=false;
   				for (int k = 0; k < dbs.length; k++) {
   					String db = Tools.removeHtml(dbs[k].replace("</div><div>", "</div>|<div>"));
-  					int pos = db.indexOf(':');
+  					pos = db.indexOf(':');
   					if (pos < 0) System.exit(0);
   					String key = db.substring(0, pos).trim().toUpperCase();
   					String[] values = db.substring(pos + 1).trim().split(" ");
@@ -2358,6 +2359,8 @@ public class InteractionDB {
 							urn=urnForComponent(keggIdFrom(part));
 						} else urls.add(new URL(part.trim()));
 					}
+					TreeSet<URL> dummy = map.get(urn);
+					if (dummy!=null) urls.addAll(dummy);
 					map.put(urn, urls);
 				}
 			} catch (SQLException e) {
