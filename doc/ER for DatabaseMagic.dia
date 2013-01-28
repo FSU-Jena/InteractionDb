@@ -10,28 +10,34 @@
     <dia:attribute name="paper">
       <dia:composite type="paper">
         <dia:attribute name="name">
-          <dia:string>#A4#</dia:string>
+          <dia:string>#A0#</dia:string>
         </dia:attribute>
         <dia:attribute name="tmargin">
-          <dia:real val="1"/>
+          <dia:real val="2.8222000598907471"/>
         </dia:attribute>
         <dia:attribute name="bmargin">
-          <dia:real val="1"/>
+          <dia:real val="2.8222000598907471"/>
         </dia:attribute>
         <dia:attribute name="lmargin">
-          <dia:real val="1"/>
+          <dia:real val="2.8222000598907471"/>
         </dia:attribute>
         <dia:attribute name="rmargin">
-          <dia:real val="1"/>
+          <dia:real val="2.8222000598907471"/>
         </dia:attribute>
         <dia:attribute name="is_portrait">
           <dia:boolean val="true"/>
         </dia:attribute>
         <dia:attribute name="scaling">
-          <dia:real val="0.60000002384185791"/>
+          <dia:real val="1.9564989805221558"/>
         </dia:attribute>
         <dia:attribute name="fitto">
-          <dia:boolean val="false"/>
+          <dia:boolean val="true"/>
+        </dia:attribute>
+        <dia:attribute name="fitwidth">
+          <dia:int val="1"/>
+        </dia:attribute>
+        <dia:attribute name="fitheight">
+          <dia:int val="1"/>
         </dia:attribute>
       </dia:composite>
     </dia:attribute>
@@ -1453,7 +1459,7 @@
         <dia:point val="16.9444,17"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="16.8444,16.9;19.3431,19.1"/>
+        <dia:rectangle val="16.8444,16.9;19.3432,19.1"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
@@ -1523,7 +1529,7 @@
         <dia:point val="16.9444,18"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="14.925,17.8761;17.0683,18.6742"/>
+        <dia:rectangle val="14.9251,17.8761;17.0683,18.6742"/>
       </dia:attribute>
       <dia:attribute name="conn_endpoints">
         <dia:point val="16.9444,18"/>
@@ -1786,7 +1792,7 @@
         <dia:point val="18.4944,43"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="19.8468,22.0466;27.8172,42.4688"/>
+        <dia:rectangle val="19.8469,22.0466;27.8172,42.4688"/>
       </dia:attribute>
       <dia:attribute name="bez_points">
         <dia:point val="18.4944,43"/>
@@ -2524,7 +2530,7 @@
         <dia:point val="15.5342,12.0488"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="15.3953,11.9098;17.0646,13.139"/>
+        <dia:rectangle val="15.3952,11.9098;17.0646,13.139"/>
       </dia:attribute>
       <dia:attribute name="conn_endpoints">
         <dia:point val="15.5342,12.0488"/>
@@ -2784,7 +2790,7 @@
         <dia:point val="34.3604,18.4066"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="34.2385,17.8781;36.0476,18.5285"/>
+        <dia:rectangle val="34.2385,17.8781;36.0475,18.5285"/>
       </dia:attribute>
       <dia:attribute name="conn_endpoints">
         <dia:point val="34.3604,18.4066"/>
@@ -4021,7 +4027,7 @@
         <dia:point val="6,39"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="6.9501,38.95;17.7429,41.9705"/>
+        <dia:rectangle val="6.9501,38.95;17.7429,41.9706"/>
       </dia:attribute>
       <dia:attribute name="bez_points">
         <dia:point val="6,39"/>
