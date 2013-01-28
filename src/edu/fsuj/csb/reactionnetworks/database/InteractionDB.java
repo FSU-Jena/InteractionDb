@@ -1802,7 +1802,7 @@ public class InteractionDB {
 		String formula=null;
 		for (int i=0; i<lines.length; i++){
 			String line=lines[i];
-			int start=line.toUpperCase().indexOf("FORMULA");
+			int start=line.indexOf("FORMULA");
 			if (start>0){
 				start=line.indexOf("<td",start);
 				int end=line.indexOf("</tr>", start);
@@ -1812,9 +1812,9 @@ public class InteractionDB {
 			}
 		}
 		Tools.noteOnce(url+" returns formula "+formula);
-		try {
+/*		try {
 	    Thread.sleep(30000);
-    } catch (InterruptedException e) {}
+    } catch (InterruptedException e) {} */
 		Tools.endMethod(formula);
 	  return formula;
   }
