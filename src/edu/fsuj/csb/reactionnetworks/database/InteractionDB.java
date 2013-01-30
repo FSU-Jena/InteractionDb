@@ -76,7 +76,7 @@ public class InteractionDB {
 	private static String dbHost = "localhost";
 	private static String dbUserName = "client";
 	private static String dbPassword = "interaction";
-	private static String dbName = "interactiondb5";
+	private static String dbName = "interactiondb";
 	
 	private static Connection connection = null;
 	private static TreeMap<String, TreeSet<String>> unificationRules;
