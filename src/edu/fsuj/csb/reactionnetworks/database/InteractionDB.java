@@ -1052,7 +1052,7 @@ public class InteractionDB {
   }
 
 	private static String getUnificationRulesFilename() throws IOException {
-	  return getConfigurationString("unificationRules", System.getProperty("user.home")+"/.config/InteractionDB/unificationRules.xml");
+	  return getConfigurationString("unificationRules", System.getProperty("user.home")+"/workspace/InteractionDB/unificationRules.xml");
   }
 
 	private static void mergeSubstances(Integer keptId, int mergedId) throws SQLException, IOException {
