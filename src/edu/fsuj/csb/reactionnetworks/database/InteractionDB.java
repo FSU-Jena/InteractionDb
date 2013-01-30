@@ -1,5 +1,10 @@
 package edu.fsuj.csb.reactionnetworks.database;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -65,11 +70,14 @@ import edu.fsuj.csb.tools.xml.XmlToken;
  */
 public class InteractionDB {
 	private static String dbDriver = "com.mysql.jdbc.Driver";
-	private static String dbHost = "quad.bioinf.uni-jena.de:7051";
-
+	private static String configFileName = System.getProperty("user.home")+"/.config/InteractionDB/database.config";
+	/** the following 4 values define defaults for database configuration.
+	 * Do not alter these, instead alter ~/.config/InteractionDB/database.config */
+	private static String dbHost = "localhost";
 	private static String dbUserName = "client";
 	private static String dbPassword = "interaction";
 	private static String dbName = "interactiondb5";
+	
 	private static Connection connection = null;
 	private static TreeMap<String, TreeSet<String>> unificationRules;
 	private static TreeMap<URL,Formula> formulaMap=new TreeMap<URL, Formula>(ObjectComparator.get());
@@ -85,6 +93,7 @@ public class InteractionDB {
 	private static final int DEASSIGN = -1;
 	private static final int ASSIGN_TO_NEW = 0;
 	private static final int ASSIGN_TO_OLD = 1;
+	private static final CharSequence defaultConfigComment = "# This is the config file for the InteractionDB\n#\n#use dbport = 12345 to set database port\n\n";
 
 	/**
 	 * returns the type name of the given type id
@@ -119,8 +128,9 @@ public class InteractionDB {
 	 * 
 	 * @return the connection handle
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	private static Connection connectDB() throws SQLException {
+	private static Connection connectDB() throws SQLException, IOException {
 		if (connection!=null) try {
 			Tools.indent("closing outdated Connection");
 			Thread.sleep(2000);
@@ -128,11 +138,11 @@ public class InteractionDB {
 		} catch (SQLException e) {			
 		} catch (InterruptedException e) {}
 		
-		Tools.indent("Connecting to database " + dbName + " on " + dbHost + "..."); // Ausgabe auf der Konsole
+		Tools.indent("Connecting to database " + getDBName() + " on " + getDBHost() + "..."); // Ausgabe auf der Konsole
 		try {
 			Class.forName(dbDriver).newInstance(); // Erzeugt eine neue Instanz des Datenbanktreibers
-			Connection result = DriverManager.getConnection("jdbc:mysql://" + dbHost + "/", dbUserName, dbPassword); // stellt die Verbindung über den Treiber her
-			result.createStatement().execute("USE " + dbName);
+			Connection result = DriverManager.getConnection("jdbc:mysql://" + getDBHost() + "/", getDBUser(), getDBPassword()); // stellt die Verbindung über den Treiber her
+			result.createStatement().execute("USE " + getDBName());
 			Tools.indent("ok."); // Ausgabe auf der Konsole
 			return result; // übergibt die geöffnete Verbindung an die aufrufende Methode
 		} catch (Exception e) {
@@ -140,13 +150,89 @@ public class InteractionDB {
 		}
 	}
 
+	private static String getDBPassword() throws IOException {
+		return getConfigurationString("dbpassword",dbPassword);
+  }
+
+	private static void writeDefaultConfiguration(String key, String value) throws IOException {
+		File configFile=new File(configFileName);
+		BufferedWriter bw=null;
+		if (!configFile.exists()) {
+			Tools.warn("No config file found, creating new config in "+configFileName);
+			createDirectory(configFile.getParentFile());
+			bw=new BufferedWriter(new FileWriter(configFile));
+			bw.append(defaultConfigComment);
+		} else {
+			bw=new BufferedWriter(new FileWriter(configFile,true));
+		}
+		bw.write(key+" = "+value+"\n");
+		bw.close();
+  }
+
+	private static String getDBUser() throws IOException {
+		return getConfigurationString("dbuser",dbUserName);  
+  }
+
+	private static String getDBHost() throws IOException {		
+		String host=getConfigurationString("host",dbHost);
+		if (config.containsKey("dbport")) host+=":"+config.get("dbport");
+		return host;
+	}
+
+	private static String getDBName() throws IOException {		
+	  return getConfigurationString("dbname",dbName);
+  }
+	
+	private static TreeMap<String,String> config=null;
+
+	private static String getConfigurationString(String key,String defaultValue) throws IOException {
+		if (config==null) loadConfiguration();
+	  String value=config.get(key);
+	  if (value==null){
+			writeDefaultConfiguration(key,defaultValue);
+			config.put(key, defaultValue);
+			value=defaultValue;
+	  }
+	  return value;
+  }
+
+	private static void loadConfiguration() throws IOException {
+		File configFile=new File(configFileName);
+		if (!configFile.exists()) {
+			Tools.warn("No config file found, creating new config in "+configFileName);
+			createDirectory(configFile.getParentFile());
+			BufferedWriter bw=new BufferedWriter(new FileWriter(configFile));
+			bw.append(defaultConfigComment);
+			bw.close();
+		}
+		BufferedReader br=new BufferedReader(new FileReader(configFile));
+		config=new TreeMap<String, String>(ObjectComparator.get());
+		while (br.ready()){
+			String line=br.readLine();
+			int comment=line.indexOf('#');
+			if (comment>-1) line=line.substring(0,comment);
+			int equal=line.indexOf('=');
+			if (equal>1){
+				String key=line.substring(0,equal).trim();
+				String value=line.substring(equal+1).trim();
+				config.put(key, value);
+			}
+		}
+  }
+
+	private static void createDirectory(File dir) {
+	  if (dir.exists()) return;
+	  dir.mkdirs();
+  }
+
 	/**
 	 * tries to connect to the interaction database and return the connections
 	 * 
 	 * @return the database connection, after it has been established
 	 * @throws SQLException
+	 * @throws IOException if config file can not be read
 	 */
-	private static Connection databaseConnection() throws SQLException {
+	private static Connection databaseConnection() throws SQLException, IOException {
 		if (connection == null || connection.isClosed() || connectionOutDated()) connection = connectDB();		
 		lastConnectionAccess = new GregorianCalendar().getTimeInMillis()/1000;
 		return connection;
@@ -162,8 +248,9 @@ public class InteractionDB {
 	 * 
 	 * @return the database statement object
 	 * @throws SQLException
+	 * @throws IOException if the db config file can not be read
 	 */
-	public static Statement createStatement() throws SQLException {
+	public static Statement createStatement() throws SQLException, IOException {
 		return databaseConnection().createStatement();
 	}
 
@@ -172,8 +259,9 @@ public class InteractionDB {
 	 * 
 	 * @param query
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	private static void execute(String query) throws SQLException  {
+	private static void execute(String query) throws SQLException, IOException  {
 		try {
 			Statement st = createStatement();			
 	    st.execute(query);
@@ -241,8 +329,9 @@ public class InteractionDB {
 	 * makes sure, that the database tables exist
 	 * 
 	 * @throws SQLException if sql problems occur
+	 * @throws IOException 
 	 */
-	public static void checkTables() throws SQLException {
+	public static void checkTables() throws SQLException, IOException {
 		Tools.startMethod("checktables()");
 		Statement st = createStatement();
 		Tools.indent("Assuring existence of required tables...");
@@ -294,7 +383,7 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 
-	public static int getOrCreateEntry(String tableName, String idName, String keyName, Object key) throws SQLException {
+	public static int getOrCreateEntry(String tableName, String idName, String keyName, Object key) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateEntry(table='"+tableName+"', id column='"+idName+"', key column='"+ keyName+"', key value='"+ key+"')");
 		String query = "SELECT " + idName + " FROM " + tableName + " WHERE " + keyName + "=" + dbString(key);
 		try {
@@ -337,8 +426,9 @@ public class InteractionDB {
 	 * @param name a entity name
 	 * @return the id related to the name
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static int getOrCreateNid(String name) throws SQLException {
+	public static int getOrCreateNid(String name) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateNid("+name+")");
 		int result = getOrCreateEntry("names", "nid", "name", name);
 		Tools.endMethod(result);
@@ -351,8 +441,9 @@ public class InteractionDB {
 	 * @param urn
 	 * @param name
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static void addName(int id, String name, URL source) throws SQLException {
+	public static void addName(int id, String name, URL source) throws SQLException, IOException {
 		Tools.startMethod("addName(id="+id+", '"+name+"', "+source+")");
 		int nid = getOrCreateNid(name);
 		int lid = getOrCreateUrlId(source);
@@ -370,8 +461,9 @@ public class InteractionDB {
 	 * @param urn
 	 * @param names
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static void addNames(int id, Collection<String> names, URL source) throws SQLException {
+	public static void addNames(int id, Collection<String> names, URL source) throws SQLException, IOException {
 		Tools.startMethod("addNames(id="+id+", "+names+", "+source+")");
 		int lid = getOrCreateUrlId(source);
 		Statement st = createStatement();
@@ -393,8 +485,9 @@ public class InteractionDB {
 	 * @param url
 	 * @return
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<String> getNames(URL url) throws SQLException {
+	public static TreeSet<String> getNames(URL url) throws SQLException, IOException {
 		int lid = getOrCreateUrlId(url);
 		TreeSet<String> result = Tools.StringSet();
 		String query = "SELECT DISTINCT name FROM urls NATURAL JOIN id_names NATURAL JOIN names WHERE lid=" + lid;
@@ -417,8 +510,9 @@ public class InteractionDB {
 	 * @param urn
 	 * @return
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<String> getNames(URN urn) throws SQLException{
+	public static TreeSet<String> getNames(URN urn) throws SQLException, IOException{
 		Tools.startMethod("getNames("+urn+")");
 		int uid=getOrCreateUid(urn);
 		TreeSet<String> result = Tools.StringSet();
@@ -443,8 +537,9 @@ public class InteractionDB {
 	 * @param urn
 	 * @return
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<String> getNames(int id) throws SQLException{
+	public static TreeSet<String> getNames(int id) throws SQLException, IOException{
 		Tools.startMethod("getNames("+id+")");
 		TreeSet<String> result = Tools.StringSet();
 		String query = "SELECT DISTINCT name FROM id_names NATURAL JOIN names WHERE id="+id;
@@ -463,7 +558,7 @@ public class InteractionDB {
 		return result;
 	}
 	
-	public static String getName(int nid) throws SQLException{
+	public static String getName(int nid) throws SQLException, IOException{
 		Tools.startMethod("getName(nid="+nid+")");
 		String query="SELECT name FROM names WHERE nid="+nid;
 		String result=null;
@@ -492,8 +587,9 @@ public class InteractionDB {
 	 * @param url the urls, for which the url id shall be given
 	 * @return the urlid for the given url
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static int getOrCreateUrlId(URL url) throws SQLException {
+	public static int getOrCreateUrlId(URL url) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateUrlId("+url+")");
 		int result=getOrCreateEntry("urls", "lid", "url", url);
 		Tools.endMethod("return "+result);
@@ -506,8 +602,9 @@ public class InteractionDB {
 	 * @param urn
 	 * @return
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<URL> getReferencingURLs(URN urn) throws SQLException {
+	public static TreeSet<URL> getReferencingURLs(URN urn) throws SQLException, IOException {
 		int uid = getOrCreateUid(urn);
 		TreeSet<URL> result = Tools.URLSet();
 		String query = "SELECT url FROM urn_urls NATURAL JOIN urls WHERE uid=" + uid;
@@ -532,7 +629,7 @@ public class InteractionDB {
 		return result;
 	}
 	
-	public static Vector<URL> getReferencingURLs(int id) throws SQLException {
+	public static Vector<URL> getReferencingURLs(int id) throws SQLException, IOException {
 		Tools.startMethod("getReferencingURLs("+id+")");
 		Vector<URL> result = new Vector<URL>();
 		String query = "SELECT DISTINCT url FROM ids NATURAL JOIN urns NATURAL JOIN urn_urls NATURAL JOIN urls WHERE id ="+id;
@@ -572,10 +669,10 @@ public class InteractionDB {
 	 * collects all urls of urns related to this id and returns them
 	 * @param id the id, whose urls are requested
 	 * @return the set of urls related to this entry id
-	 * @throws MalformedURLException
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<URL> getUrls(int id) throws MalformedURLException, SQLException {
+	public static TreeSet<URL> getUrls(int id) throws SQLException, IOException {
 		Tools.startMethod("getUrls("+id+")");
 		Vector<URN> urns = getURNsFor(id);
 		TreeSet<URL> urls = Tools.URLSet();
@@ -596,8 +693,9 @@ public class InteractionDB {
 	 * @param urn the urn, for which the uid is requested
 	 * @return the id of the urn
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static int getOrCreateUid(URN urn) throws SQLException {
+	public static int getOrCreateUid(URN urn) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateUid("+urn+")");
 		int result = getOrCreateEntry("urns", "uid", "urn", urn);
 		Tools.endMethod(result);
@@ -611,8 +709,9 @@ public class InteractionDB {
 	 * @return
 	 * @throws SQLException
 	 * @throws DataFormatException
+	 * @throws IOException 
 	 */
-	public static TreeSet<URN> getReferencedUrns(URL url) throws SQLException, DataFormatException {
+	public static TreeSet<URN> getReferencedUrns(URL url) throws SQLException, DataFormatException, IOException {
 		Tools.startMethod("getReferencedUrns("+url+")");
 		int lid = getOrCreateUrlId(url);
 		TreeSet<URN> result = new TreeSet<URN>(ObjectComparator.get());
@@ -638,8 +737,9 @@ public class InteractionDB {
 	 * @param id
 	 * @return the set of urns associated with the given id
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static TreeSet<Integer> getUIDsFor(int id) throws SQLException {
+	public static TreeSet<Integer> getUIDsFor(int id) throws SQLException, IOException {
 		Tools.startMethod("getUIDsFor("+id+")");
 		TreeSet<Integer> result = new TreeSet<Integer>(ObjectComparator.get());
 		String query = "SELECT uid FROM urns WHERE id=" + id;
@@ -668,8 +768,9 @@ public class InteractionDB {
 	 * @param id
 	 * @return the set of urns associated with the given id
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static Vector<URN> getURNsFor(int id) throws SQLException {
+	public static Vector<URN> getURNsFor(int id) throws SQLException, IOException {
 		Tools.startMethod("getURNsFor("+id+")");
 		Vector<URN> result = new Vector<URN>();
 		String query = "SELECT urn FROM urns WHERE id=" + id;
@@ -695,7 +796,7 @@ public class InteractionDB {
 		return result;
 	}
 
-	public static TreeSet<Integer> readUidsFor(Collection<URN> urns) throws SQLException{
+	public static TreeSet<Integer> readUidsFor(Collection<URN> urns) throws SQLException, IOException{
 		Tools.startMethod("readUidsFor("+urns+")");
 		String query="SELECT uid FROM urns WHERE urn IN "+setToDBset(urns);		
 		try {
@@ -715,7 +816,7 @@ public class InteractionDB {
 	
 //************ component ids *************************************
 
-	public static int newId(int type) throws SQLException {
+	public static int newId(int type) throws SQLException, IOException {
 		Tools.startMethod("newId(type="+type+")");
 		String query = "INSERT INTO ids VALUES(0, " + type + ")";
 		try {
@@ -735,7 +836,7 @@ public class InteractionDB {
 		}
 	}
 	
-	public static Integer readIdFor(Integer uid) throws SQLException{
+	public static Integer readIdFor(Integer uid) throws SQLException, IOException{
 		Tools.startMethod("readIdFor("+uid+")");
 		String query="SELECT id FROM urns WHERE uid="+uid;		
 		try {
@@ -755,7 +856,7 @@ public class InteractionDB {
 		}		
 	}
 	
-	public static Integer readIdFor(URN urn) throws SQLException {
+	public static Integer readIdFor(URN urn) throws SQLException, IOException {
 		Tools.startMethod("readIdFor("+urn+")");
 		String query="SELECT id FROM urns WHERE urn="+dbString(urn);		
 		try {
@@ -773,7 +874,7 @@ public class InteractionDB {
 		}		
 	}
 	
-	public static TreeSet<Integer> readIdsFor(Collection<Integer> uids) throws SQLException{
+	public static TreeSet<Integer> readIdsFor(Collection<Integer> uids) throws SQLException, IOException{
 		Tools.startMethod("readIdsFor("+uids+")");
     TreeSet<Integer> result=new TreeSet<Integer>();
     if (uids!=null && !uids.isEmpty()){
@@ -795,7 +896,7 @@ public class InteractionDB {
     return result;
 	}
 	
-	public static int getOrCreateIdFor(int uid,int type) throws SQLException{
+	public static int getOrCreateIdFor(int uid,int type) throws SQLException, IOException{
 		Tools.startMethod("getOrCreateIdFor(uid="+uid+", type="+type+")");
 		Integer id=readIdFor(uid);
     if (id==null){
@@ -807,14 +908,14 @@ public class InteractionDB {
 	}
 	
 
-	public static int getOrCreateIdFor(URN urn,int type) throws SQLException{
+	public static int getOrCreateIdFor(URN urn,int type) throws SQLException, IOException{
 		Tools.startMethod("getOrCreateIdFor("+urn+", "+type+")");
 		int id=getOrCreateIdFor(getOrCreateUid(urn),type);
 		Tools.endMethod(id);
 		return id;
 	}	
 	
-	public static int getOrCreateIdFor(Collection<URN> urns, int type) throws SQLException, UnexpectedException, NoSuchMethodException{
+	public static int getOrCreateIdFor(Collection<URN> urns, int type) throws SQLException, NoSuchMethodException, IOException{
 		Tools.startMethod("getOrCreateIdFor("+urns+", "+type+")");
 		TreeSet<Integer> uids=new TreeSet<Integer>();
 		if (urns!=null){
@@ -841,7 +942,7 @@ public class InteractionDB {
 		return ids.first();
 	}
 
-	private static Integer mergeIds(TreeSet<Integer> ids) throws SQLException, NoSuchMethodException, UnexpectedException {
+	private static Integer mergeIds(TreeSet<Integer> ids) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("mergeIds("+ids+")");
 		int type=getTypesOf(ids);
 		Iterator<Integer> it = ids.iterator();
@@ -851,7 +952,7 @@ public class InteractionDB {
 		return remaining;
   }
 
-	private static int getTypesOf(TreeSet<Integer> ids) throws SQLException, UnexpectedException {
+	private static int getTypesOf(TreeSet<Integer> ids) throws SQLException, IOException {
 	  Tools.startMethod("unequalTypesOf("+ids+")");
 	  String query="SELECT DISTINCT type FROM ids WHERE id IN "+setToDBset(ids);
 	  try{
@@ -874,7 +975,7 @@ public class InteractionDB {
 		}
   }
 
-	private static void mergeIds(Integer remaining, int merged,int type) throws SQLException, NoSuchMethodException {
+	private static void mergeIds(Integer remaining, int merged,int type) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("mergeIds("+remaining+", "+merged+", type="+type+")");
 		if (mergingAllowed(remaining,merged)){
 			switch (type){
@@ -893,7 +994,7 @@ public class InteractionDB {
 		Tools.endMethod();
   }
 	
-	private static boolean mergingAllowed(int remaining, int merged) throws SQLException {
+	private static boolean mergingAllowed(int remaining, int merged) throws SQLException, IOException {
 		Tools.startMethod("mergingAllowed("+remaining+", "+merged+")");
 		Vector<URN> urns1 = getURNsFor(remaining);
 		Vector<URN> urns2 = getURNsFor(merged);
@@ -950,7 +1051,7 @@ public class InteractionDB {
 		return unificationRules;
   }
 
-	private static void mergeSubstances(Integer keptId, int mergedId) throws SQLException {
+	private static void mergeSubstances(Integer keptId, int mergedId) throws SQLException, IOException {
 		Tools.startMethod("mergeSubstances("+keptId+", "+mergedId+")");
 		
 		uniteReactants("products",keptId,mergedId);
@@ -960,7 +1061,7 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 
-	private static void uniteReactants(String table, Integer keptId, int mergedId) throws SQLException {
+	private static void uniteReactants(String table, Integer keptId, int mergedId) throws SQLException, IOException {
 		Tools.startMethod("uniteReactants("+table+", "+mergedId+" ← "+keptId+")");
 		String query="SELECT rid,stoich FROM "+table+" WHERE sid="+mergedId; // select Reactions with obsolete agent
 		
@@ -1008,7 +1109,7 @@ public class InteractionDB {
 		Tools.endMethod();
   }
 
-	public static Integer getLastID() throws SQLException {
+	public static Integer getLastID() throws SQLException, IOException {
 		Tools.startMethod("getLastId()");
 		String query="SELECT MAX(id) FROM ids";
 		try {
@@ -1030,7 +1131,7 @@ public class InteractionDB {
 	
 //******** references *********************************
 	
-	public static void insertReference(int lid, int uid) throws SQLException{
+	public static void insertReference(int lid, int uid) throws SQLException, IOException{
 		Tools.startMethod("insertReference(lid="+lid+", uid="+uid+")");
 		try {
 			execute("INSERT INTO urn_urls VALUES ("+uid+", "+lid+")");
@@ -1040,7 +1141,7 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 
-	public static void insertReference(URL url,URN urn) throws SQLException{
+	public static void insertReference(URL url,URN urn) throws SQLException, IOException{
 		Tools.startMethod("insertReference("+url+", "+urn+")");
 		int urlid=getOrCreateUrlId(url);
 		int uid=getOrCreateUid(urn);
@@ -1048,7 +1149,7 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 	
-	public static void insertReferences(URL url,Collection<URN> urns) throws SQLException{
+	public static void insertReferences(URL url,Collection<URN> urns) throws SQLException, IOException{
 		Tools.startMethod("insertReferences("+url+", "+urns+")");
 		int urlid=getOrCreateUrlId(url);
 		for (Iterator<URN> it = urns.iterator(); it.hasNext();){
@@ -1058,20 +1159,20 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 	
-	public static void linkPathway(Integer pid, Integer cid) throws SQLException {
+	public static void linkPathway(Integer pid, Integer cid) throws SQLException, IOException {
 		Tools.startMethod("linkPathway(pid="+pid+", cid="+cid+")");
 		execute("INSERT INTO compartment_pathways VALUES(" + cid + ", " + pid + ")");
 		Tools.endMethod();
   }
 
-	public static void linkEnzymesToReaction(int rid, TreeSet<String> ecNumbers) throws SQLException {
+	public static void linkEnzymesToReaction(int rid, TreeSet<String> ecNumbers) throws SQLException, IOException {
 		TreeSet<Integer> eids = readEnzymeIds(ecNumbers);
 		for (Iterator<Integer> eid = eids.iterator(); eid.hasNext();){
 			execute("INSERT INTO reaction_enzymes VALUES (" + rid + "," + eid.next() + ")");
 		}
   }
 	
-	public static void linkOrganismsToEnzyme(TreeSet<Integer> cids, int eid) throws SQLException {
+	public static void linkOrganismsToEnzyme(TreeSet<Integer> cids, int eid) throws SQLException, IOException {
 		Tools.startMethod("linkOrganismsToEnzyme(cids="+cids+", eid="+eid+")");
 		for (Iterator<Integer> cid = cids.iterator();cid.hasNext();) execute("INSERT INTO enzymes_compartments VALUES("+cid.next()+", "+eid+")");
 		Tools.endMethod();
@@ -1081,7 +1182,7 @@ public class InteractionDB {
 	
 //******** organism components ***********************************
 	
-	private static int createBaseComponent(int type, URL source, Collection<URN>urns, Collection<String> names) throws SQLException, UnexpectedException, NoSuchMethodException{
+	private static int createBaseComponent(int type, URL source, Collection<URN>urns, Collection<String> names) throws SQLException, NoSuchMethodException, IOException{
 		Tools.startMethod("createBaseComponent("+nameForType(type)+", "+source+", "+urns+", "+names+")");
 		int id = getOrCreateIdFor(urns, type);
 		addNames(id, names, source);
@@ -1094,7 +1195,7 @@ public class InteractionDB {
 
 
 
-	private static int createBaseComponent(int type, URL source, URN urn, Collection<String> names) throws SQLException{
+	private static int createBaseComponent(int type, URL source, URN urn, Collection<String> names) throws SQLException, IOException{
 		Tools.startMethod("createBaseComponent("+nameForType(type)+", "+source+", "+urn+", "+names+")");
 		int id = getOrCreateIdFor(urn, type);
 		addNames(id,names,source);
@@ -1103,7 +1204,7 @@ public class InteractionDB {
 		return id;
 	}
 	
-	private static int createBaseComponent(int type, URL source, URN urn, String name) throws SQLException{
+	private static int createBaseComponent(int type, URL source, URN urn, String name) throws SQLException, IOException{
 		Tools.startMethod("createBaseComponent("+nameForType(type)+", "+source+", "+urn+", '"+name+"')");
 		int id = getOrCreateIdFor(urn, type);
 		addName(id,name,source);
@@ -1112,7 +1213,7 @@ public class InteractionDB {
 		return id;
 	}
 	
-	private static int createBaseComponent(int type, URL source, Collection<URN>urns, String name) throws SQLException, UnexpectedException, NoSuchMethodException{
+	private static int createBaseComponent(int type, URL source, Collection<URN>urns, String name) throws SQLException, NoSuchMethodException, IOException{
 		Tools.startMethod("createBaseComponent("+nameForType(type)+", "+source+", "+urns+", '"+name+"')");
 		int id = getOrCreateIdFor(urns, type);
 		addName(id,name,source);
@@ -1285,7 +1386,7 @@ public class InteractionDB {
 		return decision;
   }
 	
-	public static void addDecision(String databaseKey, Integer decision, boolean automatic) throws SQLException {
+	public static void addDecision(String databaseKey, Integer decision, boolean automatic) throws SQLException, IOException {
 		String query="INSERT INTO decisions VALUES ("+dbString(databaseKey)+", "+decision+", "+(automatic?"TRUE":"FALSE")+")";		
 		try {
 			execute(query);
@@ -1297,7 +1398,7 @@ public class InteractionDB {
 		}
   }
 
-	public static Integer getDecision(Object databaseKey) throws SQLException {
+	public static Integer getDecision(Object databaseKey) throws SQLException, IOException {
 		Integer decision=null;
 		Statement st=createStatement();
 		ResultSet rs=st.executeQuery("SELECT value FROM decisions WHERE keyphrase="+dbString(databaseKey));
@@ -1324,7 +1425,7 @@ public class InteractionDB {
 	  return result;
   }
 
-	public static Integer createSubstance(String name, Object formula, TreeSet<URN> urns, URL source) throws SQLException, UnexpectedException, NoSuchMethodException {
+	public static Integer createSubstance(String name, Object formula, TreeSet<URN> urns, URL source) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("createSubstance("+name+", "+formula+", "+urns+", "+source+")");
 		int id = createBaseComponent(InteractionDB.SUBSTANCE,source,urns,name);
 				
@@ -1337,7 +1438,7 @@ public class InteractionDB {
 		return id;
 	}
 	
-	public static int createEnzyme(Collection<String> names, String ec, Integer sid, URN urn, URL source) throws SQLException{
+	public static int createEnzyme(Collection<String> names, String ec, Integer sid, URN urn, URL source) throws SQLException, IOException{
 		Tools.startMethod("createEnzyme("+names+", "+ec+", "+sid+", "+urn+", "+source+")");
 		int id=createBaseComponent(InteractionDB.ENZYME,source,urn,names);		
 		try {
@@ -1349,7 +1450,7 @@ public class InteractionDB {
 		return id;
 	}
 
-	public static int createEnzyme(Collection<String> names, String ec, Integer sid, Collection<URN> urns, URL source) throws SQLException, UnexpectedException, NoSuchMethodException{
+	public static int createEnzyme(Collection<String> names, String ec, Integer sid, Collection<URN> urns, URL source) throws SQLException, NoSuchMethodException, IOException{
 		Tools.startMethod("createEnzyme("+names+", "+ec+", "+sid+", "+urns+", "+source+")");
 		int id=createBaseComponent(InteractionDB.ENZYME,source,urns,names);		
 		try {
@@ -1362,7 +1463,7 @@ public class InteractionDB {
 		return id;
 	}
 	
-	public static int createCompartment(String name, URN urn, int group, URL source) throws SQLException {
+	public static int createCompartment(String name, URN urn, int group, URL source) throws SQLException, IOException {
 		Tools.startMethod("createCompartment("+name+", "+urn+", "+group+", "+source+")");
 		int cid=createBaseComponent(COMPARTMENT, source, urn, name);
 		execute("INSERT INTO compartments VALUES ("+cid+", "+group+")");
@@ -1370,7 +1471,7 @@ public class InteractionDB {
 		return cid;
   }
 	
-	public static Integer createCompartment(String name, TreeSet<URN> urns, int group, URL source) throws SQLException, UnexpectedException, NoSuchMethodException {
+	public static Integer createCompartment(String name, TreeSet<URN> urns, int group, URL source) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("createCompartment("+name+", "+urns+", "+group+", "+source+")");
 		int cid=createBaseComponent(COMPARTMENT, source, urns, name);
 		try {
@@ -1382,14 +1483,14 @@ public class InteractionDB {
 		return cid;
   }
 	
-	public static int createPathway(URN urn, String name, URL source) throws SQLException{
+	public static int createPathway(URN urn, String name, URL source) throws SQLException, IOException{
 		Tools.startMethod("createPathway("+urn+")");
 		int result=createBaseComponent(PATHWAY, source, urn, name);
 		Tools.endMethod(result);
 		return result;
 	}
 	
-	public static void setSpontan(int rid, boolean spontan) throws SQLException{
+	public static void setSpontan(int rid, boolean spontan) throws SQLException, IOException{
 		Tools.startMethod("setSpontan(rid="+rid+", "+spontan+")");
 		String query = "SELECT spontan FROM reactions WHERE id=" + rid;
 		Statement st=createStatement();
@@ -1408,7 +1509,7 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 	
-	public static int createReaction(TreeSet<String> names, TreeSet<URN> urns, boolean spontan, URL source) throws SQLException, UnexpectedException, NoSuchMethodException {
+	public static int createReaction(TreeSet<String> names, TreeSet<URN> urns, boolean spontan, URL source) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("createReaction("+names+", "+urns+", spontan="+spontan+", "+source+")");
 		int rid=createBaseComponent(REACTION, source, urns, names);
 		setSpontan(rid, spontan);
@@ -1416,7 +1517,7 @@ public class InteractionDB {
 		return rid;
   }
 	
-	public static int createReaction(String name, TreeSet<URN> urns, boolean spontan, URL source) throws SQLException, UnexpectedException, NoSuchMethodException {
+	public static int createReaction(String name, TreeSet<URN> urns, boolean spontan, URL source) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("createReaction('"+name+"', "+urns+", spontan="+spontan+", "+source+")");
 		int rid=createBaseComponent(REACTION, source, urns, name);
 		setSpontan(rid, spontan);
@@ -1424,7 +1525,7 @@ public class InteractionDB {
 		return rid;
   }
 	
-	public static void addSubstrateToReaction(int rid, int sid, int stoich) throws SQLException {
+	public static void addSubstrateToReaction(int rid, int sid, int stoich) throws SQLException, IOException {
 		Tools.startMethod("addSubstrateToReaction(rid="+rid+": "+stoich+"×"+sid+")");
 		try {
 			execute("INSERT INTO substrates VALUES ("+sid+", "+rid+", "+stoich+")");
@@ -1434,7 +1535,7 @@ public class InteractionDB {
 		Tools.endMethod();	  
   }
 
-	public static void addProductToReaction(int rid, int sid, int stoich) throws SQLException {
+	public static void addProductToReaction(int rid, int sid, int stoich) throws SQLException, IOException {
 		Tools.startMethod("addProductToReaction(rid="+rid+": "+stoich+"×"+sid+")");
 		try{
 			execute("INSERT INTO products VALUES ("+sid+", "+rid+", "+stoich+")");
@@ -1444,7 +1545,7 @@ public class InteractionDB {
 		Tools.endMethod();	  
   }
 	
-	private static TreeSet<Integer> readEnzymeIds(TreeSet<String> ecNumbers) throws SQLException {
+	private static TreeSet<Integer> readEnzymeIds(TreeSet<String> ecNumbers) throws SQLException, IOException {
 		Tools.startMethod("readEnzymeIds("+ecNumbers+")");
 		String query = "SELECT id FROM enzymes WHERE ec IN " + ecNumbers.toString().replace("[", "(\"").replace("]", "\")").replace(",", "\",\"");
 		try {
@@ -1462,7 +1563,7 @@ public class InteractionDB {
 		}
   }
 	
-	public static int getOrCreateGroup(String category) throws SQLException {
+	public static int getOrCreateGroup(String category) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateGroup("+category+")");
 		// TODO: replace by called method?
 		int result = getOrCreateNid(category);
@@ -1470,7 +1571,7 @@ public class InteractionDB {
 		return result; 		
   }
 	
-	public static Formula getFormula(int id) throws SQLException, DataFormatException {
+	public static Formula getFormula(int id) throws SQLException, DataFormatException, IOException {
 		Tools.startMethod("getFormula("+id+")");
 		String query = "SELECT formula FROM substances WHERE id=" + id;
 		try {
@@ -1489,7 +1590,7 @@ public class InteractionDB {
 		}
 	}
 	
-	public static TreeMap<Integer, Integer> loadProducts(int id) throws SQLException {
+	public static TreeMap<Integer, Integer> loadProducts(int id) throws SQLException, IOException {
 		Tools.startMethod("loadProducts("+id+")");
 		String query = "SELECT sid,stoich FROM products WHERE rid=" + id;
 		try {
@@ -1507,7 +1608,7 @@ public class InteractionDB {
 		}
 	}
 
-	public static TreeMap<Integer, Integer> loadSubstrates(int id) throws SQLException {		
+	public static TreeMap<Integer, Integer> loadSubstrates(int id) throws SQLException, IOException {		
 		Tools.startMethod("loadSubstrates("+id+")");
 		String query = "SELECT sid,stoich FROM substrates WHERE rid=" + id;
 		try {
@@ -1526,7 +1627,7 @@ public class InteractionDB {
 		}
 	}
 	
-	public static byte readDirections(int cid, int rid) throws SQLException {
+	public static byte readDirections(int cid, int rid) throws SQLException, IOException {
 		Tools.startMethod("readDirections(cid: "+cid+", rid: "+rid+")");
 		String query = "SELECT forward,backward FROM reaction_directions WHERE cid=" + cid + " AND rid=" + rid;
 		try {
@@ -1547,7 +1648,7 @@ public class InteractionDB {
 		}
 	}
 	
-	public static TreeSet<Integer> loadEnzymesOfCompartment(int cid) throws SQLException {
+	public static TreeSet<Integer> loadEnzymesOfCompartment(int cid) throws SQLException, IOException {
 		Tools.startMethod("loadEnzymesOfCompartment("+cid+")");
 		String query = "SELECT eid FROM enzymes_compartments WHERE cid="+cid;
 		try {
@@ -1566,7 +1667,7 @@ public class InteractionDB {
 		}
 	}
 	
-	public static TreeSet<Integer> getSpontaneousReactionsActingOn(TreeSet<Integer> sids) throws SQLException {
+	public static TreeSet<Integer> getSpontaneousReactionsActingOn(TreeSet<Integer> sids) throws SQLException, IOException {
 		Tools.startMethod("getSpontaneousReactionsActingOn("+sids+")");
 		String query = null;
 		try {
@@ -1602,7 +1703,7 @@ public class InteractionDB {
 	 * @throws MalformedURLException 
 	 * @throws DataFormatException *************/
 
-	public static TreeSet<Integer> getCompartmentGroupIds() {
+	public static TreeSet<Integer> getCompartmentGroupIds() throws IOException {
 		Tools.startMethod("getCompartmentGroupIds()");
 		String query="SELECT DISTINCT groups FROM compartments";
 		TreeSet<Integer> result = new TreeSet<Integer>();
@@ -1621,8 +1722,9 @@ public class InteractionDB {
 	 * reads the ids of those substances, which have multiple urls assigned
 	 * @return vector of ids
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public static Vector<Integer> getIdsOfSubstancesWithMultipleReferencingURLs() throws SQLException {
+	public static Vector<Integer> getIdsOfSubstancesWithMultipleReferencingURLs() throws SQLException, IOException {
 		Tools.startMethod("getIdsOfSubstancesWithMultipleReferencingURLs()");
 		String query="SELECT id FROM ids NATURAL JOIN urns NATURAL JOIN urn_urls WHERE type="+SUBSTANCE+" GROUP BY id HAVING COUNT(DISTINCT lid)>1";
 		try {
@@ -1640,7 +1742,7 @@ public class InteractionDB {
     }
   }
 
-	public static void setDateMark(String string) throws SQLException {
+	public static void setDateMark(String string) throws SQLException, IOException {
 		Tools.startMethod("setDateMark("+string+")");
 		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 		String date=df.format(new Date());
@@ -1649,7 +1751,7 @@ public class InteractionDB {
 		Tools.endMethod();
   }
 
-	public static Formula getGlycanFormula(String key) throws DataFormatException, SQLException {
+	public static Formula getGlycanFormula(String key) throws DataFormatException, SQLException, IOException {
 		Tools.startMethod("getGlycanFormula("+key+")");
 		String query="SELECT id FROM abbrevations WHERE abbr="+dbString(key);
 		Statement st = createStatement();
@@ -1665,7 +1767,7 @@ public class InteractionDB {
   }
 
 
-	public static void createAbbrevation(String code, String keggId) throws DataFormatException, SQLException {
+	public static void createAbbrevation(String code, String keggId) throws DataFormatException, SQLException, IOException {
 		if (!keggId.startsWith("C")) throw new DataFormatException("Expected Kegg Compound id, found "+keggId+" instead.");
  		int aid=getOrCreateIdFor(new KeggCompoundUrn(keggId), SUBSTANCE);
 		String query="INSERT INTO abbrevations VALUES ("+dbString(code)+", "+aid+")";
@@ -2056,11 +2158,15 @@ public class InteractionDB {
 		return keggSubstanceIds;
   }
 	
-	public static void main(String[] args) throws DataFormatException {
-	  System.out.println(new Formula(removeHtml("</b> H<sub>2</sub><sup>3-</sup>O<sub>3</sub><sup>-</sup>   <b>")));
+	public static void main(String[] args) throws DataFormatException, SQLException, IOException {	  
+	  Statement st=createStatement();
+	  ResultSet rs=st.executeQuery("SHOW TABLES");
+	  while (rs.next()){
+	  	System.out.println(rs.getString(1));
+	  }
   }
 	
-	private static void addAbbrevation(String code, String keggId, Stack<String> referencedSubstanceIds) throws DataFormatException, SQLException {
+	private static void addAbbrevation(String code, String keggId, Stack<String> referencedSubstanceIds) throws DataFormatException, SQLException, IOException {
 		Tools.startMethod("addAbbrevation("+code+", "+keggId+", "+referencedSubstanceIds+")");
 	  createAbbrevation(code, keggId);
 	  referencedSubstanceIds.push(keggId);	  
@@ -2320,7 +2426,7 @@ public class InteractionDB {
   		return null;
   	}
   	
-  	public static void printMissingAbbrevations() throws SQLException{
+  	public static void printMissingAbbrevations() throws SQLException, IOException{
   		System.out.println("unresolved abbrevations:");
   		Statement st=createStatement();
   		for (String abbrevation:unresolvedAbbrevations){
@@ -2341,7 +2447,7 @@ public class InteractionDB {
   		st.close();
   	}
 
-		public static TreeMap<URN, TreeSet<URL>> getDecisionsForKeggUrls() throws SQLException, MalformedURLException, DataFormatException {
+		public static TreeMap<URN, TreeSet<URL>> getDecisionsForKeggUrls() throws SQLException, DataFormatException, IOException {
 			Tools.startMethod("getDecisionsForKeggUrls()");
 			String query="SELECT keyphrase FROM decisions WHERE keyphrase like '%:kegg.%'";
 			TreeMap<URN,TreeSet<URL>> map=new TreeMap<URN, TreeSet<URL>>(ObjectComparator.get());
