@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urnRules>
+  <denyUnification urn1="urn:miriam:kegg.compound:C13109" urn2="urn:miriam:kegg.compound:C02046" />
+  
+  <denyUnification urn1="urn:miriam:kegg.compound:C00399" urn2="urn:miriam:kegg.compound:C01967" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C00399" urn2="urn:miriam:kegg.compound:C11378" />  
+  <denyUnification urn1="urn:miriam:kegg.compound:C00399" urn2="urn:miriam:kegg.compound:C17568" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C00399" urn2="urn:miriam:kegg.compound:C17569" />
+  
+  <denyUnification urn1="urn:miriam:kegg.compound:C08175" urn2="urn:miriam:kegg.compound:C12961" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C08175" urn2="urn:miriam:kegg.compound:C15643" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C12961" urn2="urn:miriam:kegg.compound:C15643" />
+
+  <denyUnification urn1="urn:miriam:kegg.compound:C00951" urn2="urn:miriam:kegg.compound:C12859" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C00951" urn2="urn:miriam:kegg.compound:C13077" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C00951" urn2="urn:miriam:kegg.compound:C13444" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C00951" urn2="urn:miriam:kegg.compound:C14640" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C12859" urn2="urn:miriam:kegg.compound:C13077" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C12859" urn2="urn:miriam:kegg.compound:C13444" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C12859" urn2="urn:miriam:kegg.compound:C14640" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C13077" urn2="urn:miriam:kegg.compound:C13444" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C13077" urn2="urn:miriam:kegg.compound:C14640" />
+  <denyUnification urn1="urn:miriam:kegg.compound:C13444" urn2="urn:miriam:kegg.compound:C14640" />
+</urnRules>
