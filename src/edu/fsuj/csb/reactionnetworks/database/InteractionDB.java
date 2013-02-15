@@ -1877,7 +1877,12 @@ public class InteractionDB {
 			formulaCode=null;
 		} 
 		Formula result=null;
-		if (formulaCode!=null) result=new Formula(formulaCode);
+		try {
+			if (formulaCode!=null) result=new Formula(formulaCode);
+		} catch (DataFormatException dfe){
+			System.err.println(dfe.getMessage());
+			throw new DataFormatException("@ "+url);
+		}
 		formulaMap.put(url, result);
 		Tools.endMethod(result);
 	  return result;
