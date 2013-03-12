@@ -9,5 +9,6 @@
 	<classpathentry kind="src" path="/URN"/>
 	<classpathentry kind="src" path="/GUI"/>
 	<classpathentry kind="src" path="/OrganismTools"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/Configuration"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

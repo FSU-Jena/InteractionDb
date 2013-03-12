@@ -1,10 +1,5 @@
 package edu.fsuj.csb.reactionnetworks.database;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -32,6 +27,7 @@ import java.util.zip.DataFormatException;
 import javax.naming.NameNotFoundException;
 import javax.swing.JOptionPane;
 
+import edu.fsuj.csb.tools.configuration.Configuration;
 import edu.fsuj.csb.tools.newtork.pagefetcher.PageFetcher;
 import edu.fsuj.csb.tools.organisms.Formula;
 import edu.fsuj.csb.tools.organisms.Reaction;
@@ -70,19 +66,19 @@ import edu.fsuj.csb.tools.xml.XmlToken;
  */
 public class InteractionDB {
 	private static String dbDriver = "com.mysql.jdbc.Driver";
-	private static String configFileName = System.getProperty("user.home")+"/.config/InteractionDB/database.config";
 	/** the following 4 values define defaults for database configuration.
 	 * Do not alter these, instead alter ~/.config/InteractionDB/database.config */
-	private static String dbHost = "localhost";
-	private static String dbUserName = "client";
-	private static String dbPassword = "interaction";
-	private static String dbName = "interactiondb";
+	private static String defaultDbHost = "localhost";
+	private static String defaultDbUserName = "client";
+	private static String defaultDbPassword = "interaction";
+	private static String defaultDbName = "interactiondb";
 	
 	private static Connection connection = null;
 	private static TreeMap<String, TreeSet<String>> unificationRules;
 	private static TreeMap<URL,Formula> formulaMap=new TreeMap<URL, Formula>(ObjectComparator.get());
 	private static TreeSet<String> unresolvedAbbrevations=Tools.StringSet();
 	private static long lastConnectionAccess=0;
+	private static Configuration configuration;
 	
 	public final static int COMPARTMENT_GROUP = 1;
 	public static final int COMPARTMENT = 2;
@@ -93,7 +89,6 @@ public class InteractionDB {
 	private static final int DEASSIGN = -1;
 	private static final int ASSIGN_TO_NEW = 0;
 	private static final int ASSIGN_TO_OLD = 1;
-	private static final CharSequence defaultConfigComment = "# This is the config file for the InteractionDB\n#\n#use dbport = 12345 to set database port\n\n";
 
 	/**
 	 * returns the type name of the given type id
@@ -120,7 +115,7 @@ public class InteractionDB {
 	}
 
 	public static void setDBName(String db) {
-		dbName = db;
+		defaultDbName = db;
 	}
 
 	/**
@@ -151,79 +146,36 @@ public class InteractionDB {
 	}
 
 	private static String getDBPassword() throws IOException {
-		return getConfigurationString("dbpassword",dbPassword);
+		return configuration().get("dbpassword",defaultDbPassword);
   }
 
-	private static void writeDefaultConfiguration(String key, String value) throws IOException {
-		File configFile=new File(configFileName);
-		BufferedWriter bw=null;
-		if (!configFile.exists()) {
-			Tools.warn("No config file found, creating new config in "+configFileName);
-			createDirectory(configFile.getParentFile());
-			bw=new BufferedWriter(new FileWriter(configFile));
-			bw.append(defaultConfigComment);
-		} else {
-			bw=new BufferedWriter(new FileWriter(configFile,true));
-		}
-		bw.write(key+" = "+value+"\n");
-		bw.close();
+
+
+	private static Configuration configuration() throws IOException {
+		if (configuration==null) configuration=new Configuration("InteractionDB");
+	  return configuration;
   }
 
 	private static String getDBUser() throws IOException {
-		return getConfigurationString("dbuser",dbUserName);  
+		return configuration().get("dbuser",defaultDbUserName);  
   }
 
 	private static String getDBHost() throws IOException {		
-		String host=getConfigurationString("host",dbHost);
-		if (config.containsKey("dbport")) host+=":"+config.get("dbport");
+		String host=configuration().get("host",defaultDbHost);
+		if (configuration().containsKey("dbport")) host+=":"+configuration().get("dbport");
 		return host;
 	}
 
 	private static String getDBName() throws IOException {		
-	  return getConfigurationString("dbname",dbName);
+	  return configuration().get("dbname",defaultDbName);
   }
 	
-	private static TreeMap<String,String> config=null;
 
-	private static String getConfigurationString(String key,String defaultValue) throws IOException {
-		if (config==null) loadConfiguration();
-	  String value=config.get(key);
-	  if (value==null){
-			writeDefaultConfiguration(key,defaultValue);
-			config.put(key, defaultValue);
-			value=defaultValue;
-	  }
-	  return value;
-  }
 
-	private static void loadConfiguration() throws IOException {
-		File configFile=new File(configFileName);
-		if (!configFile.exists()) {
-			Tools.warn("No config file found, creating new config in "+configFileName);
-			createDirectory(configFile.getParentFile());
-			BufferedWriter bw=new BufferedWriter(new FileWriter(configFile));
-			bw.append(defaultConfigComment);
-			bw.close();
-		}
-		BufferedReader br=new BufferedReader(new FileReader(configFile));
-		config=new TreeMap<String, String>(ObjectComparator.get());
-		while (br.ready()){
-			String line=br.readLine();
-			int comment=line.indexOf('#');
-			if (comment>-1) line=line.substring(0,comment);
-			int equal=line.indexOf('=');
-			if (equal>1){
-				String key=line.substring(0,equal).trim();
-				String value=line.substring(equal+1).trim();
-				config.put(key, value);
-			}
-		}
-  }
 
-	private static void createDirectory(File dir) {
-	  if (dir.exists()) return;
-	  dir.mkdirs();
-  }
+
+
+
 
 	/**
 	 * tries to connect to the interaction database and return the connections
@@ -1052,7 +1004,7 @@ public class InteractionDB {
   }
 
 	private static String getUnificationRulesFilename() throws IOException {
-	  return getConfigurationString("unificationRules", System.getProperty("user.home")+"/workspace/InteractionDb/urnRules.xml");
+	  return configuration().get("unificationRules", System.getProperty("user.home")+"/workspace/InteractionDb/urnRules.xml");
   }
 
 	private static void mergeSubstances(Integer keptId, int mergedId) throws SQLException, IOException {
