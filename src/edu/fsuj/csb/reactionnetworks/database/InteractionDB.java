@@ -146,7 +146,7 @@ public class InteractionDB {
 			Tools.indent("ok."); // Ausgabe auf der Konsole
 			return result; // übergibt die geöffnete Verbindung an die aufrufende Methode
 		} catch (Exception e) {
-			throw new SQLException("Unable to connect to database!");
+			throw new SQLException("Unable to connect to database ("+getDBName()+" on "+getDBHost()+")!");
 		}
 	}
 
