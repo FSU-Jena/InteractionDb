@@ -47,7 +47,6 @@ import edu.fsuj.csb.tools.urn.miriam.KnapsackUrn;
 import edu.fsuj.csb.tools.urn.miriam.LipidBankUrn;
 import edu.fsuj.csb.tools.urn.miriam.LipidMapsUrn;
 import edu.fsuj.csb.tools.urn.miriam.MiriamUrn;
-import edu.fsuj.csb.tools.urn.miriam.PubChemCompoundUrn;
 import edu.fsuj.csb.tools.urn.miriam.PubChemSubstanceUrn;
 import edu.fsuj.csb.tools.urn.miriam.threeDMetUrn;
 import edu.fsuj.csb.tools.xml.NoTokenException;
@@ -2166,29 +2165,29 @@ public class InteractionDB {
   			Tools.endMethod();
   			throw new DataFormatException("Can not create URN for "+keggSubstanceId);
   		}
-  		String description = substanceUrn.fetch();
   
   		TreeSet<String> names = Tools.StringSet();
   
   		TreeSet<URN> urns = new TreeSet<URN>(ObjectComparator.get());
   		urns.add(substanceUrn);
   
+  		String data = substanceUrn.fetch();
   
-  		if (description.length() < 5) {
+  		if (data.length() < 5) {
   			Tools.endMethod();
   			return false;
   		}
   
   		/************ the following lines of code are fixes for some special entries *******************************/
   
-  		if (description.contains("No such database")) {
+/*  		if (data.contains("No such database")) {
   			if (keggSubstanceId.startsWith("C06125LECTIN") || keggSubstanceId.startsWith("C04927LECTIN") || keggSubstanceId.startsWith("C04911LECTIN") || keggSubstanceId.startsWith("C03405LECTIN") || keggSubstanceId.startsWith("C02352LECTIN")) {
   				Tools.endMethod();
   				return false; // has some remarks, that are hard to parse, but are also not of interest
   			} else throw new IllegalArgumentException("was not able to create valid url from content of " + keggSubstanceId);
-  		}
+  		}*/
 
-  		String lowerDescription=description.toLowerCase();
+  		String lowerDescription=data.toLowerCase();
   		int pos=lowerDescription.indexOf("obsolete");
   		if (pos>0 && pos!=lowerDescription.indexOf("obsolete pesticide")){
   			Runtime.getRuntime().exec("gnome-open "+substanceUrn.url());
@@ -2197,45 +2196,40 @@ public class InteractionDB {
   
   		/************** end of fixes *****************************/
   
-  		String[] lines = description.split("\n");
+  		String[] lines = data.split("\n");
   		Formula formula = null;
   		TreeSet<String> synonyms = Tools.StringSet();
   		String definition=null;
   		for (int i = 0; i < lines.length; i++) {
-  
-  			if (lines[i].contains("<nobr>Name</nobr>")) {
-  				while (!lines[++i].contains("</div>")) {
-  					String name = Tools.removeHtml(lines[i]);
-  					names.add(name.endsWith(";") ? (name.substring(0, name.length() - 1)) : name); // only remove endo-of-line semicolons, preserve in-string semicolons
-  				}
+  			String line=lines[i];
+  			if (line.startsWith("NAME") || line.startsWith("COMPOSITION")) {  				
+  				String name=line.substring(12).trim();
+  				if (name.endsWith(";")) name=name.substring(0, name.length()-1);
+  				names.add(name);
+  				while (!lines[i+1].startsWith(" ")) {
+  					name = lines[++i].trim();
+  	  				if (name.endsWith(";")) name=name.substring(0, name.length()-1);
+  	  				names.add(name);
+   				}
   			}
-  			if (lines[i].contains("<nobr>Definition</nobr>")) {
-  				while (!lines[++i].contains("</div>")) {
-  					definition = Tools.removeHtml(lines[i]);
-  				}
-  			}
-  			if (lines[i].contains("<nobr>Composition</nobr>") && names.isEmpty()) {
-  				while (!lines[++i].contains("</div>")) {
-  					String name = Tools.removeHtml(lines[i]);
-  					names.add(name.endsWith(";") ? (name.substring(0, name.length() - 1)) : name); // only remove endo-of-line semicolons, preserve in-string semicolons
-  				}
+  			if (line.startsWith("DEFINITION")) {
+  				definition=line.substring(12).trim();
   			}
   
-  			if (lines[i].contains("<nobr>Formula</nobr>")) {
-  				String dummy=removeHtml(lines[++i]);
+  			if (line.startsWith("FORMULA")) {
+  				String dummy=line.substring(12).trim();
   				if (dummy!=null && dummy.length()>0) formula = new Formula(dummy);				
   			}
   			
-  			if (lines[i].contains("<nobr>Other DBs</nobr>")) {
-  				String htmlWithSeparator = lines[++i].replace("</div><div style=\"float", "</div>|<div style=\"float");
-  				String[] dbs = htmlWithSeparator.split("\\|");
+  			if (line.startsWith("DBLINKS")) {
   				boolean stop=false;
-  				for (int k = 0; k < dbs.length; k++) {
-  					String db = Tools.removeHtml(dbs[k].replace("</div><div>", "</div>|<div>"));
-  					pos = db.indexOf(':');
+  				line=line.substring(12).trim();
+  				while (true) { 					
+  					
+  					pos = line.indexOf(':');
   					if (pos < 0) System.exit(0);
-  					String key = db.substring(0, pos).trim().toUpperCase();
-  					String[] values = db.substring(pos + 1).trim().split(" ");
+  					String key = line.substring(0, pos).trim().toUpperCase();
+  					String[] values = line.substring(pos + 1).trim().split(" ");
   					for (int v = 0; v < values.length; v++) {
   						String value = values[v];
   						if (key.equals("GLYCOMEDB")) {
@@ -2257,14 +2251,11 @@ public class InteractionDB {
   						} else if (key.equals("PUBCHEM")) {
   							try {
   								Integer.parseInt(value);
-  								if (dbs[k].contains("summary.cgi?sid")) {
-  									URN pcsu = new PubChemSubstanceUrn(value);
-  									urns.add(pcsu);
-  								} else if (dbs[k].contains("summary.cgi?cid")) {
-  									URN pcsu = new PubChemCompoundUrn(value);
-  									urns.add(pcsu);
-  									System.exit(0);
-  								} else throw new DataFormatException("unknown kind of PubChem ID found: " + dbs[k]);
+  								
+  								/* there are two different kinds of pubchen links! */
+  								
+								URN pcsu = new PubChemSubstanceUrn(value);
+								urns.add(pcsu);
   							} catch (NumberFormatException e) {
   								Tools.warnOnce(value + " is not a Glycome DB code!");
   							}
@@ -2302,6 +2293,8 @@ public class InteractionDB {
   							throw new DataFormatException("found reference to unknown database: " + key + " => " + value);
   						}
   					}
+  					if (!lines[i+1].startsWith(" ")) break;
+  					line=lines[++i];
   				}
   				if (stop) {
   					System.out.println(urns);
@@ -2309,28 +2302,41 @@ public class InteractionDB {
   				}
   			}
   
-  			if (lines[i].contains("<nobr>Remark</nobr>")) {
-  				String remark = Tools.removeHtml(lines[++i]);
-  
-  				if (remark.contains("Same as")) {
-  					String[] dummy = remark.replace("Same as:", "").split(" ");
-  					for (int k = 0; k < dummy.length; k++) {
-  						if (dummy[k].length() < 6) continue;
-  						String keggId = dummy[k].substring(0, 6);
-  						try {
-  							Integer.parseInt(keggId.substring(1));
-  						} catch (NumberFormatException e) {
-  							System.err.println("\"" + keggId + "\" is not a valid kegg id, skipping.");
-  							continue;
+  			if (line.startsWith("REMARK")) {
+  				boolean sameAs=false;
+  				while (true){
+  	  				String remark = line.substring(12).trim();  	  				
+				
+  	  				if (remark.contains("Same as:")) sameAs=true;
+  	  				if (sameAs){
+  	  					if (remark.startsWith("ATC code:")) sameAs=false;
+  	  					if (remark.startsWith("Therapeutic category:")) sameAs=false;
+  	  				}
+  	  				
+  	  				if (sameAs){  	  					
+  						String[] ids = remark.replace("Same as:", "").split(" ");
+  						for (String id:ids) {
+  							if (id.length() < 6) continue;
+  							String keggId = id.substring(0, 6);
+  							URN alternativeUrn = urnForComponent(keggId);
+  							if (alternativeUrn!=null){
+  								synonyms.add(keggId);
+  								System.out.println("add synonym: "+keggId);
+  								if (alternativeUrn != null) urns.add(alternativeUrn);
+  							} else {
+  								System.err.println("something's wrong with "+line.trim());
+  								System.exit(-1);
+  							}
   						}
-  						URN alternativeUrn = urnForComponent(keggId);
-  						synonyms.add(keggId);
-  						if (alternativeUrn != null) urns.add(alternativeUrn);
-  					}
+  	  				}
+  	  				
+  					if (!lines[i+1].startsWith(" ")) break;
+  					line=lines[++i];
   				}
+  				
   			}
   		}
-  		if (description.contains("No such data")) {
+  		if (data.contains("No such data")) {
   			names.add("missing substance");
   		} else {
   			if (keggSubstanceId.startsWith("G")){
@@ -2378,12 +2384,17 @@ public class InteractionDB {
 			return null;
   	}
   	
-  	public static KeggUrn urnForComponent(String keggId) throws MalformedURLException, DataFormatException {  		
-  		if (keggId.startsWith("C")) return new KeggCompoundUrn(keggId);
-  		if (keggId.startsWith("G")) return new KeggGlycanUrn(keggId);
-  		if (keggId.startsWith("R")) return new KeggReactionUrn(keggId);
-  		if (keggId.startsWith("D")) return new KeggDrugUrn(keggId);
-  		if (keggId.startsWith("E")) return new KeggEDrugUrn(keggId);
+  	public static KeggUrn urnForComponent(String keggId) throws MalformedURLException, DataFormatException {
+		try {
+			Integer.parseInt(keggId.substring(1));
+	  		if (keggId.startsWith("C")) return new KeggCompoundUrn(keggId);
+	  		if (keggId.startsWith("G")) return new KeggGlycanUrn(keggId);
+	  		if (keggId.startsWith("R")) return new KeggReactionUrn(keggId);
+	  		if (keggId.startsWith("D")) return new KeggDrugUrn(keggId);
+	  		if (keggId.startsWith("E")) return new KeggEDrugUrn(keggId);
+		} catch (NumberFormatException e) {
+			System.err.println("\"" + keggId + "\" is not a valid kegg id, skipping.");
+		}
   		return null;
   	}
   	
