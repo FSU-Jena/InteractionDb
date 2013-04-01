@@ -1792,7 +1792,7 @@ public class InteractionDB {
 		} else if (url.toString().contains("drugbank.ca/drugs")){
 			formulaCode=getFormulaCodeFromDrugBank(url);
 		} else if (url.toString().contains("kanaya.naist.jp/knapsack_jsp/information.jsp")){
-			formulaCode=getFormulaCodeFromKnapsack(url);
+			// TODO: enable again, when page available again formulaCode=getFormulaCodeFromKnapsack(url);
 		} else if (url.toString().contains("ebi.ac.uk/chebi/searchId.do")){
 			formulaCode=getFormulaCodeFromChebi(url);
 		} else if (url.toString().contains("ebi.ac.uk/ontology-lookup")){
@@ -2206,7 +2206,7 @@ public class InteractionDB {
   				String name=line.substring(12).trim();
   				if (name.endsWith(";")) name=name.substring(0, name.length()-1);
   				names.add(name);
-  				while (!lines[i+1].startsWith(" ")) {
+  				while (lines[i+1].startsWith(" ")) {
   					name = lines[++i].trim();
   	  				if (name.endsWith(";")) name=name.substring(0, name.length()-1);
   	  				names.add(name);
@@ -2311,6 +2311,7 @@ public class InteractionDB {
   	  				if (sameAs){
   	  					if (remark.startsWith("ATC code:")) sameAs=false;
   	  					if (remark.startsWith("Therapeutic category:")) sameAs=false;
+  	  					if (remark.startsWith("LECTIN:")) sameAs=false;
   	  				}
   	  				
   	  				if (sameAs){  	  					
@@ -2321,9 +2322,8 @@ public class InteractionDB {
   							URN alternativeUrn = urnForComponent(keggId);
   							if (alternativeUrn!=null){
   								synonyms.add(keggId);
-  								System.out.println("add synonym: "+keggId);
   								if (alternativeUrn != null) urns.add(alternativeUrn);
-  							} else {
+  							} else {  								
   								System.err.println("something's wrong with "+line.trim());
   								System.exit(-1);
   							}
@@ -2392,9 +2392,8 @@ public class InteractionDB {
 	  		if (keggId.startsWith("R")) return new KeggReactionUrn(keggId);
 	  		if (keggId.startsWith("D")) return new KeggDrugUrn(keggId);
 	  		if (keggId.startsWith("E")) return new KeggEDrugUrn(keggId);
-		} catch (NumberFormatException e) {
-			System.err.println("\"" + keggId + "\" is not a valid kegg id, skipping.");
-		}
+		} catch (NumberFormatException e) {}
+		System.err.println("\"" + keggId + "\" is not a valid kegg id, skipping.");
   		return null;
   	}
   	
