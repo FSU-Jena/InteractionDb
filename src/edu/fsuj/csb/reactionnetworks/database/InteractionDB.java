@@ -2340,7 +2340,7 @@ public class InteractionDB {
   			names.add("missing substance");
   		} else {
   			if (keggSubstanceId.startsWith("G")){
-  				Formula derivedFormula=InteractionDB.deriveFormulaFromKCF(new URL("http://www.genome.jp/dbget-bin/www_bget?-f+k+glycan+"+keggSubstanceId));
+  				Formula derivedFormula=InteractionDB.deriveFormulaFromKCF(new URL("http://rest.kegg.jp/get/"+keggSubstanceId));
   				if (formula==null){
   					formula=derivedFormula;
   				} else {
