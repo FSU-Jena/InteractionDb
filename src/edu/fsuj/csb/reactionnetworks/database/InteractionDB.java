@@ -72,6 +72,8 @@ public class InteractionDB {
 	private static String defaultDbPassword = "interaction";
 	private static String defaultDbName = "interactiondb";
 	
+	private static boolean testMode = false;
+	
 	private static Connection connection = null;
 	private static TreeMap<String, TreeSet<String>> unificationRules;
 	private static TreeMap<URL,Formula> formulaMap=new TreeMap<URL, Formula>(ObjectComparator.get());
@@ -212,10 +214,11 @@ public class InteractionDB {
 	 * @throws SQLException
 	 * @throws IOException 
 	 */
-	private static void execute(String query) throws SQLException, IOException  {
+	public static void execute(String query) throws SQLException, IOException  {
+		if (testMode) return;
 		try {
 			Statement st = createStatement();			
-	    st.execute(query);
+			st.execute(query);
 			st.close();
 		} catch (SQLException e) {
 			if (e.getMessage().contains("Communication link failure")) try {
@@ -226,7 +229,7 @@ public class InteractionDB {
 			} catch (SQLException e2){
 				throw new SQLException(e.getMessage()+" : "+query);
 			}
-    }
+		}
 		Tools.indent(query);
 	}
 
@@ -245,6 +248,7 @@ public class InteractionDB {
 	 */
 	@SuppressWarnings("rawtypes")
 	public static String setToDBset(Collection c) {
+		if (c.isEmpty()) return "()";
 		Object firstElement=c.iterator().next();
 		String result=c.toString();
 		if (firstElement.getClass()==Integer.class){
@@ -284,6 +288,10 @@ public class InteractionDB {
 	 */
 	public static void checkTables() throws SQLException, IOException {
 		Tools.startMethod("checktables()");
+		if (testMode){
+			Tools.endMethod();
+			return;
+		}
 		Statement st = createStatement();
 		Tools.indent("Assuring existence of required tables...");
 		Vector<String> queries = new Vector<String>();
@@ -351,13 +359,15 @@ public class InteractionDB {
 			}
 			rs.close();
 			rs=null;
-			query = "INSERT INTO " + tableName + "("+keyName+") VALUES(" + dbString(key) + ")";
-			st.execute(query, Statement.RETURN_GENERATED_KEYS);			
-			Tools.indent(query);
-			rs = st.getGeneratedKeys();
 			int id = 0;
-			if (rs.next()) id = rs.getInt(1);
-			rs.close();
+			if (!testMode){
+				query = "INSERT INTO " + tableName + "("+keyName+") VALUES(" + dbString(key) + ")";
+				st.execute(query, Statement.RETURN_GENERATED_KEYS);			
+				Tools.indent(query);
+				rs = st.getGeneratedKeys();
+				if (rs.next()) id = rs.getInt(1);
+				rs.close();
+			}
 			st.close();
 			Tools.endMethod(id);
 			return id;
@@ -771,14 +781,16 @@ public class InteractionDB {
 		Tools.startMethod("newId(type="+type+")");
 		String query = "INSERT INTO ids VALUES(0, " + type + ")";
 		try {
-			Statement st = createStatement();
-			st.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
-			Tools.indent(query);
-			ResultSet rs = st.getGeneratedKeys();
 			int id = 0;
-			if (rs.next()) id = rs.getInt(1);
-			rs.close();
-			st.close();
+			if (!testMode){
+				Statement st = createStatement();
+				st.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
+				Tools.indent(query);
+				ResultSet rs = st.getGeneratedKeys();
+				if (rs.next()) id = rs.getInt(1);
+				rs.close();
+				st.close();
+			}
 			Tools.endMethod(id);
 			return id;
 		} catch (SQLException e) {
@@ -796,10 +808,10 @@ public class InteractionDB {
 	    Tools.indent(query);
 	    Integer result=null;
 	    if (rs.next()) result=rs.getInt(1);
-			if (result==0) result=null;
+		if (result!=null && result==0) result=null;
 	    rs.close();
 	    st.close();
-			Tools.endMethod(result);
+		Tools.endMethod(result);
 	    return result;
     } catch (SQLException e) {
 			System.err.println(query);
@@ -917,7 +929,7 @@ public class InteractionDB {
 		 	} else error="Found NO type for ids ("+ids+")!";	  	
 	  	rs.close();
 	  	st.close();
-	  	if (error!=null) throw new UnexpectedException(error);
+	  	if (error!=null && !testMode) throw new UnexpectedException(error);
 	  	Tools.endMethod(result);
 	  	return result;
 		} catch (SQLException e){
@@ -1036,26 +1048,27 @@ public class InteractionDB {
 				query="SELECT stoich FROM "+table+" WHERE rid="+rid+" AND sid="+keptId;
 				Tools.indent(query);
 				rs=st.executeQuery(query);
+				
 				if (rs.next()){ // both, the kept and the merged id have an entry in this reaction
 					double newStoich=obsoleteStoich+rs.getDouble(1);
 					rs.close();
 				
 					query="UPDATE "+table+" SET stoich = "+newStoich+" WHERE rid="+rid+" AND sid="+keptId; // update stoichiometric coefficient of kept agent
 					Tools.indent(query);
-					st.execute(query);
+					execute(query);
 				
 					// entry for merged id will be removed after loop				
 				} else { // only the kept id have en entry in this reaction term
 					query="UPDATE "+table+" SET sid="+keptId+" WHERE rid="+rid+" AND sid="+mergedId;
 					Tools.indent(query);
-					st.execute(query);
-				}			
-			
+					execute(query);
+				}				
 			}
+			st.close();
 			if (!reactionsWithObsoleteReactant.isEmpty()){
 				query="DELETE FROM "+table+" WHERE sid="+mergedId; // remove entries of obsolete agent from table
 				Tools.indent(query);
-				st.execute(query);
+				execute(query);
 			}
 		} catch (SQLException e){
 			System.err.println(query);
@@ -1225,7 +1238,7 @@ public class InteractionDB {
 			TreeSet<Integer> uids = readUidsFor(linkedUrns);
 		
 			Tools.indent("uids = "+uids);
-	
+			
 			execute("UPDATE urns SET id="+id+" WHERE uid in "+setToDBset(uids)); // sollte bei allen relevanten uids die ids richtig setzen
 		}
 		addNames(id, names, sourceOfNewEntry);
@@ -1234,10 +1247,6 @@ public class InteractionDB {
 		
 		
 	 /* TODO:
-	  * 
-	  * 
-	  * 
-	  * 
 	  * an dieser Stelle sollte geprüft werden, ob durch die URNs mehrere Substanzen vereint werden.
 	  * Ist dies der Fall, muss geprüft werden, ob diese Substanzen unterschiedliche Formeln haben.
 	  * Ist dies der Fall, soll abgefragt werden, welcher Substanz die vereinende URN zugewiesen werden soll.
@@ -1732,27 +1741,31 @@ public class InteractionDB {
 	
 	public static Formula deriveFormulaFromKCF(URL url) throws IOException, DataFormatException, SQLException {
 		Tools.startMethod("deriveFormulaFromKCF("+url+")");
-		String[] lines = PageFetcher.fetchLines(url);
+		String data = PageFetcher.fetch(url).toString();
+		if (!data.contains("NODE")) return null;
+		
+		String [] lines = data.split("\n");
 		int lineCount=lines.length;
-		int lineNumber=0;
-		while (lineNumber<lineCount && !lines[lineNumber].startsWith("NODE"))	lineNumber++;
-		lineNumber++;
 		Formula sum=null;
 		boolean missingAbbrevation=false;
+		
+		int lineNumber=0;
+		while (lineNumber<lineCount && !lines[lineNumber].startsWith("NODE")) lineNumber++;
+		lineNumber++; // the line holding the "NODE" keyword only gives the number of nodes
+
 		while (lineNumber<lineCount && !lines[lineNumber].startsWith("EDGE"))	{
-			String line=lines[lineNumber].substring(16);
-			int end=line.indexOf(' ');
-			String abbrevation=line.substring(0,end);
 			Formula formula=null;
+			
+			String line=lines[lineNumber].substring(16);
+			int end=line.indexOf(' ');			
+			String abbrevation=line.substring(0,end);
 			if (!unresolvedAbbrevations.contains(abbrevation)) formula=getGlycanFormula(abbrevation);
-			if (formula!=null){
-				if (sum==null) {
-					sum=formula;
-				} else sum.add(formula);
-			} else {
+			if (formula==null){
 				missingAbbrevation=true;
 				unresolvedAbbrevations.add(abbrevation);
-			}
+			} else if (sum==null) {
+				sum=formula;
+			} else sum.add(formula);
 			lineNumber++;			
 		}
 		if (missingAbbrevation){
@@ -1792,7 +1805,7 @@ public class InteractionDB {
 		} else if (url.toString().contains("drugbank.ca/drugs")){
 			formulaCode=getFormulaCodeFromDrugBank(url);
 		} else if (url.toString().contains("kanaya.naist.jp/knapsack_jsp/information.jsp")){
-			// TODO: enable again, when page available again formulaCode=getFormulaCodeFromKnapsack(url);
+			formulaCode=getFormulaCodeFromKnapsack(url);
 		} else if (url.toString().contains("ebi.ac.uk/chebi/searchId.do")){
 			formulaCode=getFormulaCodeFromChebi(url);
 		} else if (url.toString().contains("ebi.ac.uk/ontology-lookup")){
@@ -2446,4 +2459,12 @@ public class InteractionDB {
 			Tools.endMethod(map);
 			return map;
     }
+
+		public static void setTestMode(boolean m) {
+			testMode=m;
+		}
+
+		public static boolean inTestMode() {
+			return testMode;
+		}
 }
