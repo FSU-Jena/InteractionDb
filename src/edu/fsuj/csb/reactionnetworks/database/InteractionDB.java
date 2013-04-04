@@ -1322,7 +1322,7 @@ public class InteractionDB {
 				} catch (IOException e) {
 				} catch (InterruptedException e) {  }
 			}
-			decision = JOptionPane.showOptionDialog(null, "To which substance sahll the urn ("+urnLinkedFromNewEntry+") be assigned?", "Feedback",JOptionPane.YES_NO_CANCEL_OPTION,  JOptionPane.INFORMATION_MESSAGE, null, new String[]{""+sourceOfNewEntry, ("<html>"+oldSourceURLs).replace("[", "").replace("]", "").replace(", ", "<br>"),"None of them!"},  "default");
+			decision = JOptionPane.showOptionDialog(null, "To which substance shall the urn ("+urnLinkedFromNewEntry+") be assigned?", "Feedback",JOptionPane.YES_NO_CANCEL_OPTION,  JOptionPane.INFORMATION_MESSAGE, null, new String[]{""+sourceOfNewEntry, ("<html>"+oldSourceURLs).replace("[", "").replace("]", "").replace(", ", "<br>"),"None of them!"},  "default");
 			if (decision==2){
 				decision=DEASSIGN;
 			}
