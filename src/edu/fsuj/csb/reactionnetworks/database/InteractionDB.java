@@ -1142,7 +1142,26 @@ public class InteractionDB {
 	
 	public static void linkOrganismsToEnzyme(TreeSet<Integer> cids, int eid) throws SQLException, IOException {
 		Tools.startMethod("linkOrganismsToEnzyme(cids="+cids+", eid="+eid+")");
-		for (Iterator<Integer> cid = cids.iterator();cid.hasNext();) execute("INSERT INTO enzymes_compartments VALUES("+cid.next()+", "+eid+")");
+		if (testMode) return;
+		String query=null;
+		try {
+			Statement st = createStatement();			
+			for (Iterator<Integer> cid = cids.iterator();cid.hasNext();) {
+				query="INSERT INTO enzymes_compartments VALUES("+cid.next()+", "+eid+")";
+				st.execute(query);
+			}
+			st.close();
+		} catch (SQLException e) {
+			if (e.getMessage().contains("Communication link failure"))
+				try {
+					resetConnection();
+					Statement st = createStatement();			
+					st.execute(query);
+					st.close();
+				} catch (SQLException e2){
+					throw new SQLException(e.getMessage()+" : "+query);
+				}
+		}		
 		Tools.endMethod();
   }
 
@@ -1380,6 +1399,7 @@ public class InteractionDB {
 			Tools.endMethod();
 			return null;
 		}
+		urls=replaceKeggUrls(urls);
 		for (URL url: urls){
 			Formula  f=getFormulaFrom(url);
 			if (f!=null) result.add(f);
@@ -1388,6 +1408,25 @@ public class InteractionDB {
 		Tools.endMethod(result);
 	  return result;
   }
+
+	public static Set<URL> replaceKeggUrls(Set<URL> urls) throws MalformedURLException {
+		TreeSet<URL> badUrls=Tools.URLSet();
+		for (URL url: urls){
+			if (url.toString().startsWith("http://www.genome.jp/dbget-bin/www_bget?")) {
+				badUrls.add(url);
+			}
+		}
+		for (URL bad:badUrls){
+			urls.remove(bad);
+			String urlString=bad.toString();
+			int index=urlString.length();
+			while (--index>0){
+				if (Character.isUpperCase(urlString.charAt(index))) break;
+			}
+			urls.add(new URL("http://rest.kegg.jp/get/"+urlString.substring(index)));
+		}
+		return urls;
+	}
 
 	public static Integer createSubstance(String name, Object formula, TreeSet<URN> urns, URL source) throws SQLException, NoSuchMethodException, IOException {
 		Tools.startMethod("createSubstance("+name+", "+formula+", "+urns+", "+source+")");
@@ -1790,7 +1829,6 @@ public class InteractionDB {
 	
 	public static Formula getFormulaFrom(URL url) throws IOException, NoTokenException, DataFormatException, SQLException {
 		Tools.startMethod("getFormulaFrom("+url+")");
-		url=collapsUrlVariances(url);
 		String formulaCode=null;		
 		if (formulaMap.containsKey(url)){
 		  Formula formula=formulaMap.get(url);
@@ -1798,8 +1836,11 @@ public class InteractionDB {
 			Tools.disableLogging();
 		  return formula;
 		}
-		if (url.toString().contains("genome.jp/dbget-bin/www_bget?")) {
+		if (url.toString().contains("http://rest.kegg.jp/get")) {
+			formulaCode=getFormulaCodeFromKeggApi(url);
+		} else if (url.toString().contains("genome.jp/dbget-bin/www_bget?")) {
 			formulaCode=getFormulaCodeFromKegg(url);
+			throw new UnexpectedException("InteractionDB.getFormula called with "+url);
 		} else if (url.toString().contains("lipidmaps.org/data/get_lm_lipids_dbgif.php")){
 			formulaCode=getFormulaCodeFromLipidMaps(url);
 		} else if (url.toString().contains("drugbank.ca/drugs")){
@@ -1852,25 +1893,6 @@ public class InteractionDB {
 	  return result;
   }
 	
-	private static URL collapsUrlVariances(URL url) throws MalformedURLException {
-		Tools.startMethod("collapsUrlVariances("+url+")");
-		url=collapseURLVariant(url,"cpd");
-		url=collapseURLVariant(url,"dr");
-		url=collapseURLVariant(url, "dr");
-		url=collapseURLVariant(url, "rn");
-		Tools.endMethod(url);
-		return url;
-  }
-
-	private static URL collapseURLVariant(URL url, String abbrev) throws MalformedURLException {
-		Tools.startMethod("collapseURLVariant("+url+", "+abbrev+")");
-		if (url.toString().contains("genome.jp/dbget-bin/www_bget?"+abbrev)){
-			String urlString=url.toString();
-			url=new URL(urlString.replace(abbrev+"+", "").replace(abbrev+":", ""));			
-		}
-		Tools.endMethod(url);
-		return url;
-  }
 	private static String getFormulaCodeFromEbi(URL url) throws IOException {
 		Tools.startMethod("getFormulaCodeFromEbi("+url+")");
 		String[] lines=PageFetcher.fetchLines(url);
@@ -2036,6 +2058,25 @@ public class InteractionDB {
 		Tools.endMethod(formula);
 		return formula;
   }
+	
+	private static String getFormulaCodeFromKeggApi(URL url) throws IOException, DataFormatException, SQLException {
+		Tools.startMethod("getFormulaCodeFromKegg("+url+")");
+		String[] lines=PageFetcher.fetchLines(url);
+		String formula=null;
+		for (String line:lines){
+			if (line.startsWith("FORMULA")) {
+				formula = line.substring(12).trim();
+				break;
+			}
+		}
+		if (formula==null && url.toString().contains("http://rest.kegg.jp/get/G")) {
+			Formula dummy = deriveFormulaFromKCF(url);			
+			formula=dummy==null?null:dummy.toString();
+		}
+
+		Tools.endMethod(formula);
+	  return formula;
+  }
 
 	private static String getFormulaCodeFromKegg(URL url) throws IOException, DataFormatException, SQLException {
 		Tools.startMethod("getFormulaCodeFromKegg("+url+")");
@@ -2050,6 +2091,8 @@ public class InteractionDB {
 		if (formula==null && url.toString().contains("genome.jp/dbget-bin/www_bget?G")) {
 			Formula dummy = deriveFormulaFromKCF(new URL(url.toString().replace("www_bget?G", "www_bget?-f+k+glycan+G")));			
 			formula=dummy==null?null:dummy.toString();
+			throw new UnexpectedException("InteractionDB.getFormulaCodeFromKegg called with "+url);
+
 		}
 
 		Tools.endMethod(formula);
