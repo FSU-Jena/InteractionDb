@@ -299,7 +299,7 @@ public class InteractionDB {
 		queries.add("CREATE TABLE urls (" + key("lid") + ", url TEXT NOT NULL)");
 
 		queries.add("CREATE TABLE ids (" + key("id") + ",type INT NOT NULL REFERENCES names(nid))");
-		queries.add("CREATE TABLE id_ranges (range INT PRIMARY KEY REFERENCES names(nid), min INT NOT NULL REFERENCES ids(id), max INT NOT NULL REFERENCES ids(id))");
+		queries.add("CREATE TABLE id_ranges (nid INT PRIMARY KEY REFERENCES names(nid), min INT NOT NULL REFERENCES ids(id), max INT NOT NULL REFERENCES ids(id))");
 		
 		queries.add("CREATE TABLE id_names (id INT NOT NULL REFERENCES ids(id), nid INT NOT NULL REFERENCES names(nid), lid INT NOT NULL REFERENCES urls(lid), PRIMARY KEY(id,nid,lid))");
 		queries.add("CREATE TABLE compartments (id INT NOT NULL PRIMARY KEY REFERENCES ids(id),groups INT NOT NULL REFERENCES names(nid))");
@@ -2522,7 +2522,7 @@ public class InteractionDB {
 
 		public static int[] getRange(String name) throws SQLException, IOException {
 			int nameId=getOrCreateNid(name);
-			String query="SELECT (min,max) FROM id_ranges WHERE range="+nameId+";";
+			String query="SELECT (min,max) FROM id_ranges WHERE nid="+nameId+";";
 			ResultSet rs=createStatement().executeQuery(query);
 			int[] result=new int[2];			
 			if (rs.next()){
@@ -2532,4 +2532,53 @@ public class InteractionDB {
 			rs.close();
 			return result;
     }
+		
+		/**
+		 * removes all content, which contains ids larger than the given one, from the database
+		 * 
+		 * @param keggRange the last id, which will be not deleted
+		 * 
+		 * @throws SQLException
+		 * @throws IOException 
+		 */
+		public static void cleanDb(int[] keggRange) throws SQLException, IOException {
+			if (keggRange[0]==keggRange[1]) return;
+			int min=Math.min(keggRange[0], keggRange[1]);
+			int max=Math.max(keggRange[0], keggRange[1]);
+			Statement st = InteractionDB.createStatement();
+			Vector<String> queries = new Vector<String>();
+			queries.add("DELETE FROM compartment_pathways WHERE cid>" + min + " AND cid<"+max);
+			queries.add("DELETE FROM compartment_pathways WHERE pid>" + min + " AND pid<"+max);
+			queries.add("DELETE FROM compartments WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM enzymes WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM enzymes_compartments WHERE cid>" + min + " AND cid<"+max); 
+			queries.add("DELETE FROM enzymes_compartments WHERE eid>" + min + " AND cid<"+max);
+			queries.add("DELETE FROM hierarchy WHERE contained>" + min + " AND contained<"+max);
+			queries.add("DELETE FROM hierarchy WHERE container>" + min + " AND container<"+max);
+			queries.add("DELETE FROM ids WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM names WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM products WHERE sid>" + min + " AND sid<"+max);
+			queries.add("DELETE FROM products WHERE rid>" + min + " AND rid<"+max);
+			queries.add("DELETE FROM reaction_directions WHERE rid>" + min + " AND rid<"+max);
+			queries.add("DELETE FROM reaction_directions WHERE cid>" + min + " AND cid<"+max);
+			queries.add("DELETE FROM reaction_enzymes WHERE rid>" + min + " AND rid<"+max);
+			queries.add("DELETE FROM reaction_enzymes WHERE eid>" + min + " AND eid<"+max);
+			queries.add("DELETE FROM reactions WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM substances WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM substrates WHERE sid>" + min + " AND sid<"+max);
+			queries.add("DELETE FROM substrates WHERE rid>" + min + " AND rid<"+max);
+			queries.add("DELETE FROM unifications WHERE id>" + min + " AND id<"+max);
+			queries.add("DELETE FROM unifications WHERE id2>" + min + " AND id2<"+max);
+			queries.add("DELETE FROM urns WHERE id>" + min + " AND id<"+max);
+			try {
+				while (!queries.isEmpty()) {
+					System.out.println("executing " + queries.firstElement());
+					st.execute(queries.firstElement());
+					queries.remove(0);
+				}
+			} catch (SQLException e) {
+				System.err.println(queries.firstElement());
+				throw e;
+			}
+		}
 }
