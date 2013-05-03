@@ -299,6 +299,7 @@ public class InteractionDB {
 		queries.add("CREATE TABLE urls (" + key("lid") + ", url TEXT NOT NULL)");
 
 		queries.add("CREATE TABLE ids (" + key("id") + ",type INT NOT NULL REFERENCES names(nid))");
+		queries.add("CREATE TABLE id_ranges (group PRIMARY KEY REFERENCES names(nid), min INT NOT NULL REFERENCES ids(id), max INT NOT NULL REFERENCES ids(id))");
 		
 		queries.add("CREATE TABLE id_names (id INT NOT NULL REFERENCES ids(id), nid INT NOT NULL REFERENCES names(nid), lid INT NOT NULL REFERENCES urls(lid), PRIMARY KEY(id,nid,lid))");
 		queries.add("CREATE TABLE compartments (id INT NOT NULL PRIMARY KEY REFERENCES ids(id),groups INT NOT NULL REFERENCES names(nid))");
@@ -2510,4 +2511,12 @@ public class InteractionDB {
 		public static boolean inTestMode() {
 			return testMode;
 		}
+
+		public static void storeIDrange(String rangeName, Integer firstKeggId, Integer lastKeggId) throws SQLException, IOException {
+			int rangeNameId = getOrCreateNid(rangeName);
+			String query="INSERT INTO id_ranges VALUES ("+rangeNameId+", "+firstKeggId+", "+lastKeggId+");";
+			execute(query);
+			System.out.println(rangeName + ": " + firstKeggId+"..."+lastKeggId);
+
+    }
 }
