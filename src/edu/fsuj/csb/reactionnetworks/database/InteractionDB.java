@@ -2519,4 +2519,17 @@ public class InteractionDB {
 			System.out.println(rangeName + ": " + firstKeggId+"..."+lastKeggId);
 
     }
+
+		public static int[] getRange(String name) throws SQLException, IOException {
+			int nameId=getOrCreateNid(name);
+			String query="SELECT (min,max) FROM id_ranges WHERE id="+nameId+";";
+			ResultSet rs=createStatement().executeQuery(query);
+			int[] result=new int[2];			
+			if (rs.next()){
+				result[0]=rs.getInt(1);
+				result[1]=rs.getInt(2);
+			}
+			rs.close();
+			return result;
+    }
 }
