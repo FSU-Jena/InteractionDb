@@ -2522,14 +2522,19 @@ public class InteractionDB {
 
 		public static int[] getRange(String name) throws SQLException, IOException {
 			int nameId=getOrCreateNid(name);
-			String query="SELECT (min,max) FROM id_ranges WHERE nid="+nameId+";";
-			ResultSet rs=createStatement().executeQuery(query);
+			String query="SELECT min,max FROM id_ranges WHERE nid="+nameId+";";
 			int[] result=new int[2];			
-			if (rs.next()){
-				result[0]=rs.getInt(1);
-				result[1]=rs.getInt(2);
+			try {
+				ResultSet rs=createStatement().executeQuery(query);
+				if (rs.next()){
+					result[0]=rs.getInt(1);
+					result[1]=rs.getInt(2);
+				}
+				rs.close();
+			} catch (SQLException e) {
+				System.err.println(query);
+				throw e;
 			}
-			rs.close();
 			return result;
     }
 		
@@ -2556,7 +2561,6 @@ public class InteractionDB {
 			queries.add("DELETE FROM hierarchy WHERE contained>" + min + " AND contained<"+max);
 			queries.add("DELETE FROM hierarchy WHERE container>" + min + " AND container<"+max);
 			queries.add("DELETE FROM ids WHERE id>" + min + " AND id<"+max);
-			queries.add("DELETE FROM names WHERE id>" + min + " AND id<"+max);
 			queries.add("DELETE FROM products WHERE sid>" + min + " AND sid<"+max);
 			queries.add("DELETE FROM products WHERE rid>" + min + " AND rid<"+max);
 			queries.add("DELETE FROM reaction_directions WHERE rid>" + min + " AND rid<"+max);
@@ -2567,8 +2571,6 @@ public class InteractionDB {
 			queries.add("DELETE FROM substances WHERE id>" + min + " AND id<"+max);
 			queries.add("DELETE FROM substrates WHERE sid>" + min + " AND sid<"+max);
 			queries.add("DELETE FROM substrates WHERE rid>" + min + " AND rid<"+max);
-			queries.add("DELETE FROM unifications WHERE id>" + min + " AND id<"+max);
-			queries.add("DELETE FROM unifications WHERE id2>" + min + " AND id2<"+max);
 			queries.add("DELETE FROM urns WHERE id>" + min + " AND id<"+max);
 			try {
 				while (!queries.isEmpty()) {
