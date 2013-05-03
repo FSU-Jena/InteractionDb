@@ -1000,8 +1000,7 @@ public class InteractionDB {
 			XMLReader xr = new XMLReader(getUnificationRulesFilename());
 			XmlToken rules=xr.readToken();
 			if (rules.instanceOf("urnRules")){
-				for (Iterator<XmlToken> it = rules.subtokenIterator(); it.hasNext();){
-					XmlToken rule = it.next();
+				for (XmlToken rule: rules.subtokens()){
 					if (rule.instanceOf("denyUnification")){
 						String urn1=rule.getValue("urn1");
 						String urn2=rule.getValue("urn2");
