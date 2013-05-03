@@ -299,7 +299,7 @@ public class InteractionDB {
 		queries.add("CREATE TABLE urls (" + key("lid") + ", url TEXT NOT NULL)");
 
 		queries.add("CREATE TABLE ids (" + key("id") + ",type INT NOT NULL REFERENCES names(nid))");
-		queries.add("CREATE TABLE id_ranges (group PRIMARY KEY REFERENCES names(nid), min INT NOT NULL REFERENCES ids(id), max INT NOT NULL REFERENCES ids(id))");
+		queries.add("CREATE TABLE id_ranges (range INT PRIMARY KEY REFERENCES names(nid), min INT NOT NULL REFERENCES ids(id), max INT NOT NULL REFERENCES ids(id))");
 		
 		queries.add("CREATE TABLE id_names (id INT NOT NULL REFERENCES ids(id), nid INT NOT NULL REFERENCES names(nid), lid INT NOT NULL REFERENCES urls(lid), PRIMARY KEY(id,nid,lid))");
 		queries.add("CREATE TABLE compartments (id INT NOT NULL PRIMARY KEY REFERENCES ids(id),groups INT NOT NULL REFERENCES names(nid))");
@@ -2522,7 +2522,7 @@ public class InteractionDB {
 
 		public static int[] getRange(String name) throws SQLException, IOException {
 			int nameId=getOrCreateNid(name);
-			String query="SELECT (min,max) FROM id_ranges WHERE id="+nameId+";";
+			String query="SELECT (min,max) FROM id_ranges WHERE range="+nameId+";";
 			ResultSet rs=createStatement().executeQuery(query);
 			int[] result=new int[2];			
 			if (rs.next()){
