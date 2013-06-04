@@ -1577,6 +1577,7 @@ public class InteractionDB {
 	public static Formula getFormula(int id) throws SQLException, DataFormatException, IOException {
 		Tools.startMethod("getFormula("+id+")");
 		String query = "SELECT formula FROM substances WHERE id=" + id;
+		Tools.indent(query);
 		try {
 			Statement s = createStatement();
 			ResultSet r = s.executeQuery(query);
@@ -2103,7 +2104,7 @@ public class InteractionDB {
 	  return Tools.removeHtml(string.replace("<sup>", "^")).trim();
   }
 
-	public static void preprareAbbrevations(TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds) throws NameNotFoundException, SQLException, IOException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
+	public static void preprareAbbrevations(TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds, boolean skipKeggLinks) throws NameNotFoundException, SQLException, IOException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
 		Tools.startMethod("preprareAbbrevations("+mappingFromKeggSubstanceIdsToDbIds+")");
 		Stack<String> referencedSubstanceIds = readMonosaccarideCodes();
 		
@@ -2143,7 +2144,7 @@ public class InteractionDB {
 		addAbbrevation("Tyr","C00082",referencedSubstanceIds);		
 		addAbbrevation("UDP","C00015",referencedSubstanceIds);		
 		addAbbrevation("Val","C00183",referencedSubstanceIds);
-		while (!referencedSubstanceIds.isEmpty())	parseSubstanceInfo(referencedSubstanceIds, mappingFromKeggSubstanceIdsToDbIds);
+		while (!referencedSubstanceIds.isEmpty())	parseSubstanceInfo(referencedSubstanceIds, mappingFromKeggSubstanceIdsToDbIds,skipKeggLinks);
 		Tools.endMethod(); 
   }
 	
@@ -2194,6 +2195,7 @@ public class InteractionDB {
   	 * 
   	 * @param unexploredKeggIds the kegg-internal id of the substance, whose data shall be fetched
   	 * @param mappingFromKeggSubstanceIdsToDbIds collects a mapping from the kegg substance ids to their respective ids in the local database
+	 * @param skipKeggLinks 
   	 * @param unresolvedAbbrevations 
   	 * @param source 
   	 * @throws SQLException
@@ -2204,7 +2206,7 @@ public class InteractionDB {
   	 * @throws AlreadyBoundException 
   	 * @throws NoTokenException 
   	 */
-  	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
+  	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds, boolean skipKeggLinks) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
   		Tools.startMethod("parseSubstanceInfo(...,...)");
   		String keggSubstanceId = unexploredKeggIds.pop();
   		if (mappingFromKeggSubstanceIdsToDbIds.containsKey(keggSubstanceId)) {
@@ -2277,13 +2279,13 @@ public class InteractionDB {
   				if (dummy!=null && dummy.length()>0) formula = new Formula(dummy);				
   			}
   			
-  			if (line.startsWith("DBLINKS")) {
+  			if (line.startsWith("DBLINKS") || !skipKeggLinks) {
   				boolean stop=false;
   				line=line.substring(12).trim();
   				while (true) { 					
   					
   					pos = line.indexOf(':');
-  					if (pos < 0) System.exit(0);
+  					if (pos < 0) Tools.dieLoudly("DB-Reference not structured with ':'");
   					String key = line.substring(0, pos).trim().toUpperCase();
   					String[] values = line.substring(pos + 1).trim().split(" ");
   					for (int v = 0; v < values.length; v++) {
@@ -2479,22 +2481,22 @@ public class InteractionDB {
 			String query="SELECT keyphrase FROM decisions WHERE keyphrase like '%:kegg.%'";
 			TreeMap<URN,TreeSet<URL>> map=new TreeMap<URN, TreeSet<URL>>(ObjectComparator.get());
 			try {
-				Statement st=createStatement();
+				Statement st=createStatement(); // read the keyphrases
 				ResultSet rs=st.executeQuery(query);
-				while (rs.next()){
+				while (rs.next()){ // for each keyphrase:
 					TreeSet<URL> urls=Tools.URLSet();
 					String key=rs.getString(1);
-					String[] parts = key.replace("[", "").replace("]", "").split("<|>|,");
+					String[] parts = key.replace("[", "").replace("]", "").split("<|>|,"); // split into parts
 					KeggUrn urn=null;
 					for (String part:parts) {
 						part=part.trim();
-						if (part.startsWith("urn")) {
+						if (part.startsWith("urn")) { // extract urns
 							urn=urnForComponent(keggIdFrom(part));
-						} else urls.add(new URL(part.trim()));
+						} else urls.add(new URL(part.trim())); // extract urls
 					}
-					TreeSet<URL> dummy = map.get(urn);
-					if (dummy!=null) urls.addAll(dummy);
-					map.put(urn, urls);
+					TreeSet<URL> dummy = map.get(urn); // get the urls already assigned with the urn
+					if (dummy!=null) urls.addAll(dummy); // add the urls already assigned with the urn to the current list
+					map.put(urn, urls); // assign the urn with the current list
 				}
 			} catch (SQLException e) {
 				throw new SQLException(e.getMessage()+"\n\nQuery was: "+query);
