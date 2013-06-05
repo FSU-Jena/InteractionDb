@@ -2279,7 +2279,7 @@ public class InteractionDB {
   				if (dummy!=null && dummy.length()>0) formula = new Formula(dummy);				
   			}
   			
-  			if (line.startsWith("DBLINKS") || !skipKeggLinks) {
+  			if (line.startsWith("DBLINKS") && !skipKeggLinks) {
   				boolean stop=false;
   				line=line.substring(12).trim();
   				while (true) { 					
