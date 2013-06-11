@@ -2263,6 +2263,7 @@ public class InteractionDB {
   			if (line.startsWith("NAME") || line.startsWith("COMPOSITION")) {  				
   				String name=line.substring(12).trim();
   				if (name.endsWith(";")) name=name.substring(0, name.length()-1);
+  				if (name.startsWith("[") && name.endsWith("]") && name.indexOf("[", 1)<0) name=name.substring(1,name.length()-1); // resolve [name] to name
   				names.add(name);
   				while (lines[i+1].startsWith(" ")) {
   					name = lines[++i].trim();
