@@ -1937,7 +1937,7 @@ public class InteractionDB {
 				} else break;
 			} else 
 				// workarounds:
-			if (line.contains("Formula<") && !line.contains("Chemical Formula") && !(line.contains("Allergy Formula")) && !(line.contains("Cough Formula"))){
+			if (line.contains("Formula<") && !line.contains("Chemical Formula") && !(line.contains("Allergy Formula")) && !(line.contains("Cough Formula"))&& !(line.contains("Triaminic AM Decongestant Formula"))&& !(line.contains("Promatussin DM Children Formula"))){
 				System.out.println("found the following code snippet in "+url+" :");
 				System.out.println(lines[i-2]);
 				System.out.println(lines[i-1]);
@@ -2285,7 +2285,15 @@ public class InteractionDB {
   			if (line.startsWith("FORMULA")) {
   				String dummy=line.substring(12).trim();
  					if (dummy!=null && dummy.length()>0) {
- 						if (keggSubstanceId.equals("D09947")||keggSubstanceId.equals("D09912")||keggSubstanceId.equals("D09632")){
+ 						if (keggSubstanceId.equals("D09947")
+ 								||keggSubstanceId.equals("D02852")
+ 								||keggSubstanceId.equals("D02856")
+ 								||keggSubstanceId.equals("D02863")
+ 								||keggSubstanceId.equals("D06178")
+ 								||keggSubstanceId.equals("D09912")
+ 								||keggSubstanceId.equals("D09632")
+ 								||keggSubstanceId.equals("D00992")
+ 								||keggSubstanceId.equals("D06502")){
  							Tools.warn("Skipped formula of "+keggSubstanceId+".\nThe last time we visited it, it had a corrupt formula!");
  							// TODO: check http://rest.kegg.jp/get/<keggSubstanceId> for whether the formula has been corrected 							
  						} else
