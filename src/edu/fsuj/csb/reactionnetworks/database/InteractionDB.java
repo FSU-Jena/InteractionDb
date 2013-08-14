@@ -1388,6 +1388,13 @@ public class InteractionDB {
 		if (rs.next()) decision=rs.getInt(1);
 		rs.close();
 		st.close();
+		System.err.println("Hooray! We used a decision from the local database!");
+		try {
+	    Thread.sleep(20000);
+    } catch (InterruptedException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+    }
 		return decision;
   }
 
@@ -2211,7 +2218,7 @@ public class InteractionDB {
   		String keggSubstanceId = unexploredKeggIds.pop();
   		if (mappingFromKeggSubstanceIdsToDbIds.containsKey(keggSubstanceId)) {
   			Tools.indent(keggSubstanceId + " already analyzed");
-  			Tools.endMethod();
+  			Tools.endMethod(false);
   			return false;
   		}
   		KeggUrn substanceUrn = urnForComponent(keggSubstanceId);
@@ -2232,7 +2239,7 @@ public class InteractionDB {
   		String data = substanceUrn.fetch();
   
   		if (data.length() < 5) {
-  			Tools.endMethod();
+  			Tools.endMethod(false);
   			return false;
   		}
   
@@ -2277,7 +2284,19 @@ public class InteractionDB {
   
   			if (line.startsWith("FORMULA")) {
   				String dummy=line.substring(12).trim();
-  				if (dummy!=null && dummy.length()>0) formula = new Formula(dummy);				
+ 					if (dummy!=null && dummy.length()>0) {
+ 						if (keggSubstanceId.equals("D09947")||keggSubstanceId.equals("D09912")||keggSubstanceId.equals("D09632")){
+ 							Tools.warn("Skipped formula of "+keggSubstanceId+".\nThe last time we visited it, it had a corrupt formula!");
+ 							// TODO: check http://rest.kegg.jp/get/<keggSubstanceId> for whether the formula has been corrected 							
+ 						} else
+ 						try {
+ 							formula = new Formula(dummy);
+ 						} catch (Exception e){ // ok something went wrong. Let's do it again, but this time show verbose output
+ 							Tools.enableLogging();
+ 							Tools.resetIntendation();
+ 							formula = new Formula(dummy);
+ 						}
+ 					}
   			}
   			
   			if (line.startsWith("DBLINKS") && !skipKeggLinks) {
@@ -2434,7 +2453,7 @@ public class InteractionDB {
   //		InteractionDB.setNames(sid, names);
   //		if (formula != null) InteractionDB.setFormula(sid, formula);
   
-  		Tools.endMethod();
+  		Tools.endMethod(true);
   		return true;
   	}
   	
