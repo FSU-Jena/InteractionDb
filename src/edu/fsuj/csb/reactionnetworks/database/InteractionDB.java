@@ -1398,7 +1398,7 @@ public class InteractionDB {
 		return decision;
   }
 
-	private static TreeSet<Formula> getFormulasFromURNResolutionPages(URN urnLinkedFromNewEntry) throws IOException, NoTokenException, DataFormatException, SQLException {
+	public static TreeSet<Formula> getFormulasFromURNResolutionPages(URN urnLinkedFromNewEntry) throws IOException, NoTokenException, DataFormatException, SQLException {
 		Tools.startMethod("getFormulasFromURNResolutionPages("+urnLinkedFromNewEntry+")");
 		TreeSet<Formula> result=new TreeSet<Formula>(ObjectComparator.get());
 		Set<URL> urls = urnLinkedFromNewEntry.urls();
@@ -1881,10 +1881,20 @@ public class InteractionDB {
 				}
 				if (code!=null) break;
 			}
-			code=code.toUpperCase().replace("FORMULATION", "").replace("RELEASE FORMULA", "").replace("MEDIA FLOW FORMULA XL", "").replace("TRYPTEC FORMULA", "");
+			code=code.toUpperCase().replace("FORMULATION", "").replace("RELEASE FORMULA", "").replace("MEDIA FLOW FORMULA XL", "").replace("TRYPTEC FORMULA", "").replace("<P> FORMULA [KEGG COMPOUND </P>", "");
 			
-			if (code.contains("FORMULA")) throw new UnknownFormatConversionException(url+" contains string FORMULA:\n"+code);
-			if (code.contains("FORMEL")) throw new UnknownFormatConversionException(url+" contains string FORMEL:\n"+code);
+			if (code.contains("FORMULA")){
+				int pos=code.indexOf("FORMULA");
+				pos-=20;
+				if (pos<0) pos=0;
+				throw new UnknownFormatConversionException(url+" contains string FORMULA:\n"+code.substring(pos,pos+50));
+			}
+			if (code.contains("FORMEL")){
+				int pos=code.indexOf("FORMEL");
+				pos-=20;
+				if (pos<0) pos=0;
+				throw new UnknownFormatConversionException(url+" contains string FORMEL:\n"+code.substring(pos,pos+50));
+			}
 		}
 		if (formulaCode!=null && (formulaCode.equals("-") || formulaCode.equals(""))) {
 			formulaCode=null;
@@ -2213,9 +2223,11 @@ public class InteractionDB {
   	 * @throws AlreadyBoundException 
   	 * @throws NoTokenException 
   	 */
-  	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds, boolean skipKeggLinks) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
+	
+	 	public static boolean parseSubstanceInfo(Stack<String> unexploredKeggIds, TreeMap<String, Integer> mappingFromKeggSubstanceIdsToDbIds, boolean skipKeggLinks) throws SQLException, IOException, NameNotFoundException, NoSuchMethodException, DataFormatException, AlreadyBoundException, NoTokenException {
   		Tools.startMethod("parseSubstanceInfo(...,...)");
   		String keggSubstanceId = unexploredKeggIds.pop();
+  		
   		if (mappingFromKeggSubstanceIdsToDbIds.containsKey(keggSubstanceId)) {
   			Tools.indent(keggSubstanceId + " already analyzed");
   			Tools.endMethod(false);
