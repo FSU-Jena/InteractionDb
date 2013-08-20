@@ -1947,7 +1947,7 @@ public class InteractionDB {
 				} else break;
 			} else 
 				// workarounds:
-			if (line.contains("Formula<") && !line.contains("Chemical Formula") && !(line.contains("Allergy Formula")) && !(line.contains("Cough Formula"))&& !(line.contains("Triaminic AM Decongestant Formula"))&& !(line.contains("Promatussin DM Children Formula"))){
+			if (line.contains("Formula<") && !line.contains("Chemical Formula") && !(line.contains("Allergy Formula")) && !(line.contains("Cough Formula"))&& !(line.contains("Triaminic AM Decongestant Formula"))&& !(line.contains("Promatussin DM Children Formula"))&& !(line.contains("C.H.V. Formula"))&& !(line.contains("C.V. Formula"))){
 				System.out.println("found the following code snippet in "+url+" :");
 				System.out.println(lines[i-2]);
 				System.out.println(lines[i-1]);
