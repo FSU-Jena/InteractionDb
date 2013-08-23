@@ -1385,16 +1385,15 @@ public class InteractionDB {
 		Integer decision=null;
 		Statement st=createStatement();
 		ResultSet rs=st.executeQuery("SELECT value FROM decisions WHERE keyphrase="+dbString(databaseKey));
-		if (rs.next()) decision=rs.getInt(1);
+		if (rs.next()) {
+			decision=rs.getInt(1);
+			System.err.println("Hooray! We used a decision from the local database!");
+			try {
+		    Thread.sleep(20000);
+	    } catch (InterruptedException e) {}
+		}
 		rs.close();
 		st.close();
-		System.err.println("Hooray! We used a decision from the local database!");
-		try {
-	    Thread.sleep(20000);
-    } catch (InterruptedException e) {
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-    }
 		return decision;
   }
 
@@ -1934,7 +1933,7 @@ public class InteractionDB {
 	  return formula;
   }
 
-	private static String getFormulaCodeFromDrugBank(URL url) throws IOException {
+	public static String getFormulaCodeFromDrugBank(URL url) throws IOException {
 		Tools.startMethod("getFormulaCodeFromDrugBank("+url+")");
 		String[] lines=PageFetcher.fetchLines(url);
 		String formula=null;
@@ -1947,7 +1946,7 @@ public class InteractionDB {
 				} else break;
 			} else 
 				// workarounds:
-			if (line.contains("Formula<") && !line.contains("Chemical Formula") && !(line.contains("Allergy Formula")) && !(line.contains("Cough Formula"))&& !(line.contains("Triaminic AM Decongestant Formula"))&& !(line.contains("Promatussin DM Children Formula"))&& !(line.contains("C.H.V. Formula"))&& !(line.contains("C.V. Formula"))){
+			if (line.contains("Formula<") && !line.contains("Chemical Formula") && (!line.contains("Allergy Formula")) && (!line.contains("Cough Formula"))&& (!line.contains("Triaminic AM Decongestant Formula"))&& (!line.contains("Children Formula")) && (!line.contains("C.H.V. Formula"))&& (!line.contains("C.V. Formula"))){
 				System.out.println("found the following code snippet in "+url+" :");
 				System.out.println(lines[i-2]);
 				System.out.println(lines[i-1]);
