@@ -2623,4 +2623,8 @@ public class InteractionDB {
 				throw e;
 			}
 		}
+
+		public static void cleanNames() throws SQLException, IOException {
+	    execute("delete id_names.* from urns natural join id_names natural join names where urn like 'urn:miriam:kegg%' and substring(urn,-6)=name");	    
+    }
 }
