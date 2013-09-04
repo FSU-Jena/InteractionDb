@@ -343,8 +343,9 @@ public class InteractionDB {
 		Tools.endMethod();
 	}
 
-	public static int getOrCreateEntry(String tableName, String idName, String keyName, Object key) throws SQLException, IOException {
+	public static Integer getOrCreateEntry(String tableName, String idName, String keyName, Object key) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateEntry(table='"+tableName+"', id column='"+idName+"', key column='"+ keyName+"', key value='"+ key+"')");
+		if (key==null) return null;
 		String query = "SELECT " + idName + " FROM " + tableName + " WHERE " + keyName + "=" + dbString(key);
 		try {
 			Statement st = createStatement();
@@ -408,7 +409,7 @@ public class InteractionDB {
 	public static void addName(int id, String name, URL source) throws SQLException, IOException {
 		Tools.startMethod("addName(id="+id+", '"+name+"', "+source+")");
 		int nid = getOrCreateNid(name);
-		int lid = getOrCreateUrlId(source);
+		Integer lid = getOrCreateUrlId(source);
 		try {
 			execute("INSERT INTO id_names VALUES(" + id + ", " + nid + ", "+lid+")");
 		} catch (SQLException e) {
@@ -551,9 +552,9 @@ public class InteractionDB {
 	 * @throws SQLException
 	 * @throws IOException 
 	 */
-	public static int getOrCreateUrlId(URL url) throws SQLException, IOException {
+	public static Integer getOrCreateUrlId(URL url) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateUrlId("+url+")");
-		int result=getOrCreateEntry("urls", "lid", "url", url);
+		Integer result=getOrCreateEntry("urls", "lid", "url", url);
 		Tools.endMethod("return "+result);
 		return result;
 	}
@@ -2626,5 +2627,30 @@ public class InteractionDB {
 
 		public static void cleanNames() throws SQLException, IOException {
 	    execute("delete id_names.* from urns natural join id_names natural join names where urn like 'urn:miriam:kegg%' and substring(urn,-6)=name");	    
+    }
+
+		public static TreeSet<Integer> getReactionsFor(TreeSet<Integer> listed) throws SQLException, IOException {			
+			String query="SELECT subs.rid"+
+									" FROM (SELECT rid,sid" +
+									"       FROM substrates"+
+									"       UNION SELECT rid,sid" +
+									"       FROM products) AS subs" +
+									" WHERE subs.sid in "+setToDBset(listed)+
+									" GROUP BY subs.rid"+
+									" HAVING COUNT(*) ="+listed.size();
+			ResultSet rs=createStatement().executeQuery(query);
+			
+			TreeSet<Integer> result=new TreeSet<Integer>();
+			while (rs.next())	result.add(rs.getInt(1));
+		  return result;
+	  }
+
+		public static Boolean isSpontan(int rid) throws SQLException, IOException {
+			String query="SELECT spontan FROM reactions WHERE id="+rid;
+			ResultSet rs=createStatement().executeQuery(query);
+			if (rs.next()){
+				return rs.getBoolean(1);
+			}
+	    return null;
     }
 }
