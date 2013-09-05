@@ -1841,7 +1841,7 @@ public class InteractionDB {
 		if (formulaMap.containsKey(url)){
 		  Formula formula=formulaMap.get(url);
 			Tools.endMethod(formula);
-			Tools.disableLogging();
+//			Tools.disableLogging();
 		  return formula;
 		}
 		if (url.toString().contains("http://rest.kegg.jp/get")) {
