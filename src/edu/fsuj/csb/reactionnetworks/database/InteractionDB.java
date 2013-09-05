@@ -393,6 +393,8 @@ public class InteractionDB {
 	 */
 	public static int getOrCreateNid(String name) throws SQLException, IOException {
 		Tools.startMethod("getOrCreateNid("+name+")");
+		if (name.startsWith("_")) name=name.substring(1);
+		name=Tools.removeHtmlEntities(name);
 		int result = getOrCreateEntry("names", "nid", "name", name);
 		Tools.endMethod(result);
 		return result;
@@ -2194,11 +2196,12 @@ public class InteractionDB {
 	
 	public static void main(String[] args) throws DataFormatException, SQLException, IOException {
 	
-	/* DANGER!!!
-	int[] range = getRange("SBML IDs");
+	 //DANGER!!!
+	int[] range = new int[]{78031,78031};
+	// range=getRange("SBML IDs");
 	range[1]=getLastID();
 	System.out.println(range[0]+"-"+range[1]);
-	cleanDb(range);*/
+	cleanDb(range);//*/
   }
 	
 	private static void addAbbrevation(String code, String keggId, Stack<String> referencedSubstanceIds) throws DataFormatException, SQLException, IOException {
