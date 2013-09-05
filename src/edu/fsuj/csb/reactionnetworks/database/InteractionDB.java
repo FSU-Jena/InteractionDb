@@ -2192,12 +2192,13 @@ public class InteractionDB {
 		return keggSubstanceIds;
   }
 	
-	public static void main(String[] args) throws DataFormatException, SQLException, IOException {	  
-	  Statement st=createStatement();
-	  ResultSet rs=st.executeQuery("SHOW TABLES");
-	  while (rs.next()){
-	  	System.out.println(rs.getString(1));
-	  }
+	public static void main(String[] args) throws DataFormatException, SQLException, IOException {
+	
+	/* DANGER!!!
+	int[] range = getRange("SBML IDs");
+	range[1]=getLastID();
+	System.out.println(range[0]+"-"+range[1]);
+	cleanDb(range);*/
   }
 	
 	private static void addAbbrevation(String code, String keggId, Stack<String> referencedSubstanceIds) throws DataFormatException, SQLException, IOException {
