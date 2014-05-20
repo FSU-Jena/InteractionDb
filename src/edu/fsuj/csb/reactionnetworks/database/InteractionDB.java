@@ -1851,6 +1851,8 @@ public class InteractionDB {
 		} else if (url.toString().contains("genome.jp/dbget-bin/www_bget?")) {
 			formulaCode=getFormulaCodeFromKegg(url);
 			throw new UnexpectedException("InteractionDB.getFormula called with "+url);
+		} else if (url.toString().contains("kegg.jp/entry/")) {
+			formulaCode=getFormulaCodeFromKegg(url);
 		} else if (url.toString().contains("lipidmaps.org/data/get_lm_lipids_dbgif.php")){
 			formulaCode=getFormulaCodeFromLipidMaps(url);
 		} else if (url.toString().contains("drugbank.ca/drugs")){
